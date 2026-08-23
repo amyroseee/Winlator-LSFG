@@ -1,0 +1,92 @@
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
+#include <sys/mman.h>
+
+#include "vortek.h"
+
+int serverFd = -1;
+uint16_t maxClientRequestId = 1;
+MemoryPool globalMemoryPool = {0};
+RingBuffer* serverRing = NULL;
+RingBuffer* clientRing = NULL;
+
+static int vortekServerConnect() {
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+
+    struct sockaddr_un server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_LOCAL;
+
+    strncpy(server_addr.sun_path, VORTEK_SERVER_PATH, sizeof(server_addr.sun_path) - 1);
+
+    int res;
+    do {
+        res = 0;
+        if (connect(fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_un)) < 0) res = -errno;
+    } 
+    while (res == -EINTR);    
+
+    if (res < 0) {
+        close(fd);
+        return -1;
+    }
+
+    return fd;
+}
+
+static bool createVkContext() {
+    char header[HEADER_SIZE];
+    *(int*)(header + 0) = REQUEST_CODE_CREATE_CONTEXT;
+    *(int*)(header + 4) = 0;
+    
+    int res = write(serverFd, header, HEADER_SIZE);
+    if (res < 0) return false;
+    
+    int shmFds[2];
+    int numFds;
+    recv_fds(serverFd, shmFds, &numFds, NULL, 0);
+    if (numFds != 2) return false;
+    
+    serverRing = RingBuffer_create(shmFds[0], SERVER_RING_BUFFER_SIZE);
+    if (!serverRing) return false;
+    
+    clientRing = RingBuffer_create(shmFds[1], CLIENT_RING_BUFFER_SIZE);
+    if (!clientRing) return false;
+    
+    close(shmFds[0]);
+    close(shmFds[1]);
+    
+    if (!globalMemoryPool.data) {
+        globalMemoryPool.data = malloc(MEMORY_POOL_MAX_SIZE);
+        memset(globalMemoryPool.data, 0, MEMORY_POOL_MAX_SIZE);        
+    }
+    return true;
+}
+
+static void terminationCallback() {
+    CLOSEFD(serverFd);
+    if (serverRing) RingBuffer_free(serverRing);
+    if (clientRing) RingBuffer_free(clientRing);
+    
+    vt_free(&globalMemoryPool);
+    MEMFREE(globalMemoryPool.data);
+}
+
+bool vortekInitOnce() {
+    if (serverFd == -1) {
+        serverFd = vortekServerConnect();
+        
+        if (serverFd > 0) {
+            if (!createVkContext()) return false;
+#if DEBUG_MODE
+            println("vortek: connected serverFd=%d pid=%d\n", serverFd, getpid());
+#endif
+        }
+        
+        atexit(terminationCallback);
+    }
+    
+    return serverFd > 0;
+}
