@@ -69,11 +69,9 @@ import com.winlator.inputcontrols.ExternalController;
 import com.winlator.inputcontrols.InputControlsManager;
 import com.winlator.math.Mathf;
 import com.winlator.renderer.GLRenderer;
-import com.winlator.widget.FpsCounter;
 import com.winlator.widget.FrameRating;
 import com.winlator.widget.InputControlsView;
 import com.winlator.widget.MagnifierView;
-import com.winlator.widget.PerfHudView;
 import com.winlator.widget.TouchpadView;
 import com.winlator.widget.XServerView;
 import com.winlator.winhandler.TaskManagerDialog;
@@ -118,8 +116,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private InputControlsManager inputControlsManager;
     private RootFS rootFS;
     private FrameRating frameRating;
-    private PerfHudView gameHubHud;
-    private final FpsCounter gameHubFpsCounter = new FpsCounter();
     private Runnable editInputControlsCallback;
     private Shortcut shortcut;
     private String[] graphicsDriver = {GraphicsDrivers.DEFAULT_VULKAN_DRIVER, GraphicsDrivers.DEFAULT_OPENGL_DRIVER};
@@ -247,10 +243,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             public void onUpdateWindowContent(Window window) {
                 if (window.id != frameRatingWindowId) return;
                 if (frameRating != null) frameRating.update();
-                if (gameHubHud != null) {
-                    gameHubFpsCounter.tick();
-                    gameHubHud.update();
-                }
             }
 
             @Override
@@ -757,21 +749,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             rootView.addView(frameRating);
         }
 
-        if (container != null && container.isGameHubHudEnabled()) {
-            gameHubHud = new PerfHudView(this);
-            gameHubHud.setFpsCounter(gameHubFpsCounter);
-            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            );
-            int margin = Math.round(10 * getResources().getDisplayMetrics().density);
-            layoutParams.leftMargin = margin;
-            layoutParams.topMargin = margin;
-            gameHubHud.setLayoutParams(layoutParams);
-            gameHubHud.setVisibility(View.GONE);
-            rootView.addView(gameHubHud);
-        }
-
         if (shortcut != null) {
             String controlsProfile = shortcut.getExtra("controlsProfile");
             if (!controlsProfile.isEmpty()) {
@@ -1242,7 +1219,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     public void changeFrameRatingVisibility(Window window, boolean visible) {
-        if (frameRating == null && gameHubHud == null) return;
+        if (frameRating == null) return;
         if (visible) {
             if (window.id == frameRatingWindowId) return;
             Window child = window.getChildAt(0);
@@ -1263,22 +1240,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 }
                 frameRatingWindowId = frameRatingWindow.id;
                 if (frameRating != null) frameRating.reset();
-                if (gameHubHud != null) {
-                    gameHubFpsCounter.reset();
-                    gameHubHud.reset();
-                    runOnUiThread(() -> gameHubHud.setVisibility(View.VISIBLE));
-                }
             }
         }
         else if (window.id == frameRatingWindowId) {
             frameRatingWindowId = -1;
-            gameHubFpsCounter.reset();
             runOnUiThread(() -> {
                 if (frameRating != null) frameRating.setVisibility(View.GONE);
-                if (gameHubHud != null) {
-                    gameHubHud.setVisibility(View.GONE);
-                    gameHubHud.reset();
-                }
             });
         }
     }

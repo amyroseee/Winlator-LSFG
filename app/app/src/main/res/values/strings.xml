@@ -370,5 +370,25 @@
     <string name="ddraw_wrapper" translatable="false">DDraw Wrapper</string>
     <string name="renderer">Renderer</string>
     <string name="default_no_override">Default (No override)</string>
-    <string name="show_gamehub_hud">Show GameHub FPS HUD</string>
+    <string name="backup_saves">Backup saves</string>
+    <string name="restore_saves">Restore saves</string>
+    <string name="searching_for_save_data">Searching for save data</string>
+    <string name="save_data_found_summary">Save data found: %1$d entries (%2$s)</string>
+    <string name="no_save_data_found">No save data found</string>
+    <string name="confirm_backup">Confirm backup</string>
+    <string name="creating_save_backup">Creating save backup</string>
+    <string name="backup_completed">Backup completed</string>
+    <string name="backup_failed">Backup failed</string>
+    <string name="searching_for_save_backups">Searching for save backups</string>
+    <string name="no_save_backups_found">No save backups found</string>
+    <string name="select_backup">Select backup</string>
+    <string name="save_backup_list_item">%1$s — %2$d entries (%3$s)</string>
+    <string name="validating_save_backup">Validating save backup</string>
+    <string name="confirm_restore">Confirm restore</string>
+    <string name="confirm_restore_summary">Restore %1$d entries (%2$s)?</string>
+    <string name="existing_files_will_be_overwritten">Existing files will be overwritten. Current save data will not be deleted silently.</string>
+    <string name="invalid_backup">Invalid or incompatible backup</string>
+    <string name="restoring_save_data">Restoring save data</string>
+    <string name="restore_completed">Restore completed</string>
+    <string name="restore_failed">Restore failed</string>
 </resources>

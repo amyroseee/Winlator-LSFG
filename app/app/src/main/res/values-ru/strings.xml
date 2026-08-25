@@ -290,4 +290,25 @@
     <string name="full">Полный</string>
     <string name="renderer">Рендерер</string>
     <string name="default_no_override">Стандартный (без замены)</string>
+    <string name="backup_saves">Создать резервную копию сохранений</string>
+    <string name="restore_saves">Восстановить сохранения</string>
+    <string name="searching_for_save_data">Поиск данных сохранений</string>
+    <string name="save_data_found_summary">Найдены данные сохранений: %1$d элементов (%2$s)</string>
+    <string name="no_save_data_found">Данные сохранений не найдены</string>
+    <string name="confirm_backup">Подтвердить резервное копирование</string>
+    <string name="creating_save_backup">Создание резервной копии сохранений</string>
+    <string name="backup_completed">Резервная копия создана</string>
+    <string name="backup_failed">Не удалось создать резервную копию</string>
+    <string name="searching_for_save_backups">Поиск резервных копий сохранений</string>
+    <string name="no_save_backups_found">Резервные копии сохранений не найдены</string>
+    <string name="select_backup">Выберите резервную копию</string>
+    <string name="save_backup_list_item">%1$s — %2$d элементов (%3$s)</string>
+    <string name="validating_save_backup">Проверка резервной копии сохранений</string>
+    <string name="confirm_restore">Подтвердить восстановление</string>
+    <string name="confirm_restore_summary">Восстановить %1$d элементов (%2$s)?</string>
+    <string name="existing_files_will_be_overwritten">Существующие файлы будут перезаписаны. Текущие сохранения не будут удалены без предупреждения.</string>
+    <string name="invalid_backup">Недействительная или несовместимая резервная копия</string>
+    <string name="restoring_save_data">Восстановление данных сохранений</string>
+    <string name="restore_completed">Восстановление завершено</string>
+    <string name="restore_failed">Не удалось восстановить сохранения</string>
 </resources>

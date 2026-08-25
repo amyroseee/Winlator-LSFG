@@ -159,12 +159,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/enable_lsfg_vk" />
 
-            <CheckBox
-                android:id="@+id/CBShowGameHubHud"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/show_gamehub_hud" />
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

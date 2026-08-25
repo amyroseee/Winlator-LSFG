@@ -308,14 +308,6 @@ public class Container {
         return true;
     }
 
-    public boolean isGameHubHudEnabled() {
-        return getExtra("gameHubHudEnabled", "0").equals("1");
-    }
-
-    public void setGameHubHudEnabled(boolean enabled) {
-        putExtra("gameHubHudEnabled", enabled ? "1" : "0");
-    }
-
     public String getWineVersion() {
         return wineVersion;
     }
@@ -476,6 +468,13 @@ public class Container {
                     break;
             }
         }
+        boolean retiredOptionsRemoved = extraData != null &&
+            (extraData.has("fpsLimit") || extraData.has("gameHubHudEnabled"));
+        if (extraData != null) {
+            extraData.remove("fpsLimit");
+            extraData.remove("gameHubHudEnabled");
+        }
+        if (retiredOptionsRemoved && getConfigFile().isFile()) saveData();
     }
 
     public static void checkObsoleteOrMissingProperties(JSONObject data) {

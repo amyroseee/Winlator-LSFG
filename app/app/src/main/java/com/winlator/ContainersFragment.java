@@ -28,13 +28,18 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.container.Container;
 import com.winlator.container.ContainerManager;
+import com.winlator.container.SmartSaveManager;
 import com.winlator.contentdialog.ContentDialog;
 import com.winlator.contentdialog.StorageInfoDialog;
+import com.winlator.core.AppUtils;
 import com.winlator.core.PreloaderDialog;
+import com.winlator.core.StringUtils;
 import com.winlator.xenvironment.RootFS;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ContainersFragment extends Fragment {
     private RecyclerView recyclerView;
@@ -152,6 +157,12 @@ public class ContainersFragment extends Fragment {
                     case R.id.menu_item_edit:
                         activity.showFragment(new ContainerDetailFragment(container.id));
                         break;
+                    case R.id.menu_item_backup_saves:
+                        backupSaves(container);
+                        break;
+                    case R.id.menu_item_restore_saves:
+                        restoreSaves(container);
+                        break;
                     case R.id.menu_item_duplicate:
                         ContentDialog.confirm(getContext(), R.string.do_you_want_to_duplicate_this_container, () -> {
                             preloaderDialog.show(R.string.duplicating_container);
@@ -177,6 +188,142 @@ public class ContainersFragment extends Fragment {
                 return true;
             });
             listItemMenu.show();
+        }
+
+        private void backupSaves(Container container) {
+            preloaderDialog.show(R.string.searching_for_save_data);
+            runAsync(() -> {
+                try {
+                    SmartSaveManager.ScanResult scan = SmartSaveManager.scan(container);
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        if (scan.entries.isEmpty()) {
+                            AppUtils.showToast(getContext(), R.string.no_save_data_found);
+                            return;
+                        }
+                        String summary = getString(R.string.save_data_found_summary,
+                            scan.entries.size(), StringUtils.formatBytes(scan.totalSize, false));
+                        showConfirmation(R.string.confirm_backup, summary, () -> createBackup(container, scan));
+                    });
+                }
+                catch (Exception e) {
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.backup_failed);
+                    });
+                }
+            });
+        }
+
+        private void createBackup(Container container, SmartSaveManager.ScanResult scan) {
+            preloaderDialog.show(R.string.creating_save_backup);
+            runAsync(() -> {
+                try {
+                    SmartSaveManager.createBackup(container, scan);
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.backup_completed);
+                    });
+                }
+                catch (Exception e) {
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.backup_failed);
+                    });
+                }
+            });
+        }
+
+        private void restoreSaves(Container container) {
+            preloaderDialog.show(R.string.searching_for_save_backups);
+            runAsync(() -> {
+                List<SmartSaveManager.BackupInfo> backups = SmartSaveManager.listBackups(container);
+                onUiThread(() -> {
+                    preloaderDialog.close();
+                    if (backups.isEmpty()) {
+                        AppUtils.showToast(getContext(), R.string.no_save_backups_found);
+                        return;
+                    }
+                    String[] items = new String[backups.size()];
+                    for (int i = 0; i < backups.size(); i++) {
+                        SmartSaveManager.BackupInfo backup = backups.get(i);
+                        items[i] = getString(R.string.save_backup_list_item, backup.displayName,
+                            backup.entryCount, StringUtils.formatBytes(backup.totalSize, false));
+                    }
+                    ContentDialog.showSelectionList(getContext(), R.string.select_backup, items, false, selected -> {
+                        if (!selected.isEmpty()) validateRestore(container, backups.get(selected.get(0)));
+                    });
+                });
+            });
+        }
+
+        private void validateRestore(Container container, SmartSaveManager.BackupInfo backup) {
+            preloaderDialog.show(R.string.validating_save_backup);
+            runAsync(() -> {
+                try {
+                    SmartSaveManager.BackupInfo validated = SmartSaveManager.validateBackup(container, backup.directory);
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        String summary = getString(R.string.confirm_restore_summary, validated.entryCount,
+                            StringUtils.formatBytes(validated.totalSize, false));
+                        showConfirmation(R.string.confirm_restore, summary+"\n\n"+
+                            getString(R.string.existing_files_will_be_overwritten),
+                            () -> performRestore(container, validated));
+                    });
+                }
+                catch (Exception e) {
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.invalid_backup);
+                    });
+                }
+            });
+        }
+
+        private void performRestore(Container container, SmartSaveManager.BackupInfo backup) {
+            preloaderDialog.show(R.string.restoring_save_data);
+            runAsync(() -> {
+                try {
+                    SmartSaveManager.restore(container, backup.directory);
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.restore_completed);
+                    });
+                }
+                catch (Exception e) {
+                    onUiThread(() -> {
+                        preloaderDialog.close();
+                        AppUtils.showToast(getContext(), R.string.restore_failed);
+                    });
+                }
+            });
+        }
+
+        private void showConfirmation(int titleResId, String message, Runnable callback) {
+            ContentDialog dialog = new ContentDialog(getContext());
+            dialog.setTitle(titleResId);
+            dialog.setMessage(message);
+            dialog.setOnConfirmCallback(callback);
+            dialog.show();
+        }
+
+        private void runAsync(Runnable runnable) {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            executor.execute(() -> {
+                try {
+                    runnable.run();
+                }
+                finally {
+                    executor.shutdown();
+                }
+            });
+        }
+
+        private void onUiThread(Runnable runnable) {
+            Activity activity = getActivity();
+            if (activity != null) activity.runOnUiThread(() -> {
+                if (isAdded()) runnable.run();
+            });
         }
 
         private void runContainer(Container container) {

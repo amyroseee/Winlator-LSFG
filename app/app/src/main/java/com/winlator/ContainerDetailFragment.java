@@ -156,9 +156,6 @@ public class ContainerDetailFragment extends Fragment {
             }
         });
 
-        final CheckBox cbShowGameHubHud = view.findViewById(R.id.CBShowGameHubHud);
-        cbShowGameHubHud.setChecked(isEditMode() && container.isGameHubHudEnabled());
-
         Spinner sAudioDriver = view.findViewById(R.id.SAudioDriver);
         AppUtils.setSpinnerSelectionFromIdentifier(sAudioDriver, isEditMode() ? container.getAudioDriver() : Container.DEFAULT_AUDIO_DRIVER);
 
@@ -233,7 +230,6 @@ public class ContainerDetailFragment extends Fragment {
                     container.setBox64Preset(box64Preset);
                     container.setDesktopTheme(desktopTheme);
                     container.setLSFGEnabled(cbEnableLSFGVK.isChecked());
-                    container.setGameHubHudEnabled(cbShowGameHubHud.isChecked());
                     container.saveData();
 
                     saveWineRegistryKeys(view);
@@ -272,7 +268,6 @@ public class ContainerDetailFragment extends Fragment {
                         if (container != null) {
                             this.container = container;
                             container.setLSFGEnabled(cbEnableLSFGVK.isChecked());
-                            container.setGameHubHudEnabled(cbShowGameHubHud.isChecked());
                             container.saveData();
                             saveWineRegistryKeys(view);
                         }

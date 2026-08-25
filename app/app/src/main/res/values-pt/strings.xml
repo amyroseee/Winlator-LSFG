@@ -311,5 +311,25 @@
     <string name="full">Completo</string>
     <string name="renderer">Renderizador</string>
     <string name="default_no_override">Padrão (Sem sobrescrita)</string>
-    <string name="show_gamehub_hud">Mostrar HUD de FPS GameHub</string>
+    <string name="backup_saves">Backup de saves</string>
+    <string name="restore_saves">Restaurar saves</string>
+    <string name="searching_for_save_data">Procurando dados de save</string>
+    <string name="save_data_found_summary">Dados de save encontrados: %1$d entradas (%2$s)</string>
+    <string name="no_save_data_found">Nenhum dado de save encontrado</string>
+    <string name="confirm_backup">Confirmar backup</string>
+    <string name="creating_save_backup">Criando backup de saves</string>
+    <string name="backup_completed">Backup concluído</string>
+    <string name="backup_failed">Falha no backup</string>
+    <string name="searching_for_save_backups">Procurando backups de saves</string>
+    <string name="no_save_backups_found">Nenhum backup de saves encontrado</string>
+    <string name="select_backup">Selecionar backup</string>
+    <string name="save_backup_list_item">%1$s — %2$d entradas (%3$s)</string>
+    <string name="validating_save_backup">Validando backup de saves</string>
+    <string name="confirm_restore">Confirmar restauração</string>
+    <string name="confirm_restore_summary">Restaurar %1$d entradas (%2$s)?</string>
+    <string name="existing_files_will_be_overwritten">Arquivos existentes serão sobrescritos. Os saves atuais não serão apagados silenciosamente.</string>
+    <string name="invalid_backup">Backup inválido ou incompatível</string>
+    <string name="restoring_save_data">Restaurando dados de save</string>
+    <string name="restore_completed">Restauração concluída</string>
+    <string name="restore_failed">Falha na restauração</string>
 </resources>
