@@ -10,8 +10,6 @@ import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.View;
 
-import com.winlator.core.LSFGDiagnostic;
-
 import java.util.Locale;
 
 /** Compact GameHub-style FPS overlay, trimmed to the FPS metric only. */
@@ -31,7 +29,6 @@ public class PerfHudView extends View {
     private FpsCounter fpsCounter;
     private float fps;
     private long lastRefresh;
-    private long lastDiagnostic;
 
     public PerfHudView(Context context) {
         this(context, null);
@@ -63,13 +60,6 @@ public class PerfHudView extends View {
         if (lastRefresh != 0 && now < lastRefresh + REFRESH_INTERVAL_MS) return;
         lastRefresh = now;
         fps = fpsCounter != null ? fpsCounter.getCurrentFPS() : 0;
-        if (lastDiagnostic == 0 || now >= lastDiagnostic + 1000) {
-            lastDiagnostic = now;
-            float refreshRate = getDisplay() != null ? getDisplay().getRefreshRate() : 0f;
-            LSFGDiagnostic.log(String.format(Locale.ENGLISH,
-                "fps-metrics gamehub_host_tick_fps=%.2f android_refresh_rate_hz=%.2f",
-                fps, refreshRate));
-        }
         post(() -> {
             requestLayout();
             invalidate();
@@ -79,7 +69,6 @@ public class PerfHudView extends View {
     public void reset() {
         fps = 0;
         lastRefresh = 0;
-        lastDiagnostic = 0;
         postInvalidate();
     }
 

@@ -2,8 +2,6 @@ package com.winlator.xenvironment.components;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Process;
 import android.util.Log;
 
@@ -17,7 +15,6 @@ import com.winlator.core.EnvVars;
 import com.winlator.core.FileUtils;
 import com.winlator.core.GeneralComponents;
 import com.winlator.core.LocaleHelper;
-import com.winlator.core.LSFGDiagnostic;
 import com.winlator.core.ProcessHelper;
 import com.winlator.widget.LogView;
 import com.winlator.xconnector.UnixSocketConfig;
@@ -135,43 +132,13 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
                 ", VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
                 ", LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH")+
                 ", VK_LOADER_DEBUG="+envVars.get("VK_LOADER_DEBUG"));
-            LSFGDiagnostic.log("Guest command: "+command);
-            LSFGDiagnostic.log("Final environment: ENABLE_LSFG="+envVars.get("ENABLE_LSFG")+
-                "; DISABLE_LSFG="+envVars.get("DISABLE_LSFG")+
-                "; DISABLE_LSFGVK="+envVars.get("DISABLE_LSFGVK")+
-                "; LSFG_CONFIG="+envVars.get("LSFG_CONFIG")+
-                "; LSFG_PROCESS="+envVars.get("LSFG_PROCESS")+
-                "; LSFGVK_CONFIG="+envVars.get("LSFGVK_CONFIG")+
-                "; LSFGVK_PROFILE="+envVars.get("LSFGVK_PROFILE")+
-                "; VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
-                "; VK_INSTANCE_LAYERS="+envVars.get("VK_INSTANCE_LAYERS")+
-                "; XDG_DATA_DIRS="+envVars.get("XDG_DATA_DIRS")+
-                "; LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH")+
-                "; VK_LOADER_DEBUG="+envVars.get("VK_LOADER_DEBUG")+
-                "; DXVK_LOG_LEVEL="+envVars.get("DXVK_LOG_LEVEL")+
-                "; DXVK_LOG_PATH="+envVars.get("DXVK_LOG_PATH"));
         }
-
-        final boolean lsfgDiagnostic = envVars.has("ENABLE_LSFG");
-        final Callback<String> diagnosticCallback = LSFGDiagnostic::process;
-        if (lsfgDiagnostic) ProcessHelper.addDebugCallback(diagnosticCallback);
         int launchedPid = ProcessHelper.exec(command, envVars, rootDir, (status) -> {
-            if (lsfgDiagnostic) {
-                // Let the stdout/stderr reader threads drain their final Vulkan/DXVK lines first.
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    ProcessHelper.removeDebugCallback(diagnosticCallback);
-                    LSFGDiagnostic.finish(status);
-                }, 1500);
-            }
             synchronized (lock) {
                 pid = -1;
             }
             if (terminationCallback != null) terminationCallback.call(status);
         });
-        if (launchedPid == -1 && lsfgDiagnostic) {
-            ProcessHelper.removeDebugCallback(diagnosticCallback);
-            LSFGDiagnostic.finish(-1);
-        }
         return launchedPid;
     }
 

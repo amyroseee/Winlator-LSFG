@@ -226,7 +226,11 @@
     <string name="lsfg_multiplier_3x">3x</string>
     <string name="lsfg_multiplier_4x">4x</string>
     <string name="lsfg_flow_scale">Flow Scale</string>
-    <string name="lsfg_performance_mode">Modo de Desempenho</string>
+    <string name="lsfg_preset">Preset</string>
+    <string name="lsfg_preset_performance">Desempenho</string>
+    <string name="lsfg_preset_balanced">Equilibrado</string>
+    <string name="lsfg_preset_quality">Qualidade</string>
+    <string name="lsfg_preset_custom">Personalizado</string>
     <string name="unable_to_apply_lsfg_settings">Não foi possível aplicar as configurações do LSFG-VK</string>
     <string name="mouse">Mouse</string>
     <string name="cursor_size">Tamanho do Cursor</string>

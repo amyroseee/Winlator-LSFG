@@ -52,7 +52,6 @@ import com.winlator.core.EnvVars;
 import com.winlator.core.FileUtils;
 import com.winlator.core.GeneralComponents;
 import com.winlator.core.KeyValueSet;
-import com.winlator.core.LSFGDiagnostic;
 import com.winlator.core.LocaleHelper;
 import com.winlator.core.PreloaderDialog;
 import com.winlator.core.ProcessHelper;
@@ -598,51 +597,34 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             return;
         }
 
-        LSFGDiagnostic.start();
-        LSFGDiagnostic.log("Container: name="+container.getName());
-        LSFGDiagnostic.log("Graphics driver: "+String.join(",", graphicsDriver));
-        LSFGDiagnostic.log("DX wrapper: "+dxwrapper);
-        LSFGDiagnostic.log("LSFG state: enabled="+container.isLSFGEnabled()+
-            "; multiplier="+container.getLSFGMultiplier()+
-            "; flow_scale="+container.getLSFGFlowScale()+
-            "; performance_mode="+container.isLSFGPerformanceMode());
+        // Performance Mode OFF is a legacy, unstable configuration that is no longer exposed.
+        // Normalize old containers before writing the runtime profile, while retaining the
+        // backend quality-path implementation for future investigation.
+        if (container.normalizeLSFGPerformanceMode()) container.saveData();
 
         File losslessDLL = new File(getFilesDir(), "lsfg-vk/Lossless.dll");
-        LSFGDiagnostic.log("Lossless.dll: path="+losslessDLL.getAbsolutePath()+
-            "; exists="+losslessDLL.isFile()+"; readable="+losslessDLL.canRead()+
-            "; size="+losslessDLL.length());
         if (!losslessDLL.isFile() || !losslessDLL.canRead() || losslessDLL.length() == 0) {
-            LSFGDiagnostic.log("ABORT: Lossless.dll missing, unreadable, or empty");
             Log.w("LSFG-VK", "Lossless.dll is missing, unreadable, or empty; layer not activated");
             AppUtils.showToast(this, R.string.lsfg_requires_lossless_dll);
             return;
         }
 
         if (!RootFSInstaller.installLSFGVKLayer(this, rootFS)) {
-            LSFGDiagnostic.log("ABORT: runtime layer staging failed");
             Log.e("LSFG-VK", "Runtime layer staging failed; layer not activated");
             return;
         }
         File layerLibrary = new File(rootFS.getLibDir(), "liblsfg-vk.so");
         File layerManifest = new File(rootFS.getRootDir(), "usr/share/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json");
-        LSFGDiagnostic.log("Layer library: path="+layerLibrary.getAbsolutePath()+
-            "; exists="+layerLibrary.isFile()+"; readable="+layerLibrary.canRead()+
-            "; size="+layerLibrary.length());
-        LSFGDiagnostic.log("Layer manifest: path="+layerManifest.getAbsolutePath()+
-            "; exists="+layerManifest.isFile()+"; readable="+layerManifest.canRead()+
-            "; size="+layerManifest.length());
         if (!layerLibrary.isFile() || !layerLibrary.canRead() || layerLibrary.length() == 0 ||
             !layerManifest.isFile() || !layerManifest.canRead() || layerManifest.length() == 0) {
             Log.e("LSFG-VK", "Runtime layer library or Vulkan manifest not found; layer not activated");
-            LSFGDiagnostic.log("ABORT: layer library or manifest unavailable");
             return;
         }
 
         File configFile = writeLSFGConfig(
             container.getLSFGMultiplier(),
             container.getLSFGFlowScale(),
-            losslessDLL,
-            container.isLSFGPerformanceMode()
+            losslessDLL
         );
         if (configFile == null) return;
 
@@ -653,24 +635,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         envVars.put("LSFG_PROCESS", "winlator-lsfg");
         envVars.put("LSFGVK_CONFIG", configFile.getAbsolutePath());
         envVars.put("LSFGVK_PROFILE", "winlator-lsfg");
-        envVars.put("VK_LOADER_DEBUG", "error,warn,layer");
-        envVars.put("DXVK_LOG_LEVEL", "debug");
-        envVars.put("DXVK_LOG_PATH", "none");
-        LSFGDiagnostic.log("Manifest content:\n"+FileUtils.readString(layerManifest));
-        LSFGDiagnostic.log("conf.toml path="+configFile.getAbsolutePath()+
-            "; exists="+configFile.isFile()+"; readable="+configFile.canRead()+
-            "; size="+configFile.length());
-        LSFGDiagnostic.log("conf.toml content:\n"+FileUtils.readString(configFile));
-        LSFGDiagnostic.log("Launch variables before GuestProgramLauncher: ENABLE_LSFG="+envVars.get("ENABLE_LSFG")+
-            "; DISABLE_LSFG="+envVars.get("DISABLE_LSFG")+
-            "; DISABLE_LSFGVK="+envVars.get("DISABLE_LSFGVK")+
-            "; LSFG_CONFIG="+envVars.get("LSFG_CONFIG")+
-            "; LSFG_PROCESS="+envVars.get("LSFG_PROCESS")+
-            "; LSFGVK_CONFIG="+envVars.get("LSFGVK_CONFIG")+
-            "; LSFGVK_PROFILE="+envVars.get("LSFGVK_PROFILE")+
-            "; VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
-            "; VK_INSTANCE_LAYERS="+envVars.get("VK_INSTANCE_LAYERS")+
-            "; LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH"));
         Log.i("LSFG-VK", "Activation requested: layer="+layerLibrary.getAbsolutePath()+
             " ("+layerLibrary.length()+" bytes), manifest="+layerManifest.getAbsolutePath()+
             ", Lossless.dll="+losslessDLL.getAbsolutePath()+" ("+losslessDLL.length()+
@@ -679,7 +643,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         Log.i("LSFG-VK", "conf.toml: "+FileUtils.readString(configFile).replace('\n', ' '));
     }
 
-    private File writeLSFGConfig(int multiplier, float flowScale, File losslessDLL, boolean performanceMode) {
+    private File writeLSFGConfig(int multiplier, float flowScale, File losslessDLL) {
         File configDir = new File(rootFS.getRootDir(), RootFS.USER_CONFIG_PATH+"/lsfg-vk");
         if (!configDir.isDirectory() && !configDir.mkdirs()) {
             Log.e("XServerDisplayActivity", "Failed to create LSFG-VK config directory");
@@ -698,7 +662,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             "name = \"winlator-lsfg\"\n"+
             "multiplier = "+multiplier+"\n"+
             "flow_scale = "+String.format(Locale.US, "%.2f", flowScale)+"\n"+
-            "performance_mode = "+performanceMode+"\n"+
+            "performance_mode = true\n"+
             "pacing = \"none\"\n";
 
         if (!FileUtils.writeString(stagingFile, toml)) {
@@ -715,7 +679,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
         Log.i("LSFG-VK", "Configuration updated: multiplier="+multiplier+
             ", flow_scale="+String.format(Locale.US, "%.2f", flowScale)+
-            ", performance_mode="+performanceMode);
+            ", performance_mode=true");
         return configFile;
     }
 
@@ -727,11 +691,11 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         return container != null ? container.getLSFGFlowScale() : Container.LSFG_DEFAULT_FLOW_SCALE;
     }
 
-    public boolean isLSFGPerformanceMode() {
-        return container != null && container.isLSFGPerformanceMode();
+    public String getLSFGPreset() {
+        return container != null ? container.getLSFGPreset() : Container.LSFG_PRESET_CUSTOM;
     }
 
-    public boolean applyLSFGVKConfig(int multiplier, float flowScale, boolean performanceMode) {
+    public boolean applyLSFGVKConfig(int multiplier, float flowScale, String preset) {
         File losslessDLL = new File(getFilesDir(), "lsfg-vk/Lossless.dll");
         if (container == null || !container.isLSFGEnabled() || !losslessDLL.isFile() ||
             !losslessDLL.canRead() || losslessDLL.length() == 0) {
@@ -741,11 +705,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         multiplier = multiplier >= 1 && multiplier <= 4 ? multiplier : Container.LSFG_DEFAULT_MULTIPLIER;
         flowScale = Float.isFinite(flowScale) ? Mathf.clamp(flowScale, 0.2f, 1.0f) : Container.LSFG_DEFAULT_FLOW_SCALE;
-        if (writeLSFGConfig(multiplier, flowScale, losslessDLL, performanceMode) == null) return false;
+        if (writeLSFGConfig(multiplier, flowScale, losslessDLL) == null) return false;
 
         container.setLSFGMultiplier(multiplier);
         container.setLSFGFlowScale(flowScale);
-        container.setLSFGPerformanceMode(performanceMode);
+        container.setLSFGPreset(preset, flowScale);
+        container.setLSFGPerformanceMode(true);
         container.saveData();
         return true;
     }

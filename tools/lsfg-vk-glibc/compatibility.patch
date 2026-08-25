@@ -1,5 +1,5 @@
 diff --git a/lsfg-vk-backend/include/lsfg-vk-backend/lsfgvk.hpp b/lsfg-vk-backend/include/lsfg-vk-backend/lsfgvk.hpp
-index eacb98e..efbb561 100644
+index eacb98e..d1f3a86 100644
 --- a/lsfg-vk-backend/include/lsfg-vk-backend/lsfgvk.hpp
 +++ b/lsfg-vk-backend/include/lsfg-vk-backend/lsfgvk.hpp
 @@ -89,7 +89,6 @@ namespace lsfgvk::backend {
@@ -18,17 +18,18 @@ index eacb98e..efbb561 100644
              uint32_t width, uint32_t height,
              bool hdr, float flow, bool perf
          );
-@@ -112,7 +110,7 @@ namespace lsfgvk::backend {
+@@ -112,7 +110,8 @@ namespace lsfgvk::backend {
          /// @param context Context to use.
          /// @throws backend::error on failure
          ///
 -        void scheduleFrames(Context& context);
-+        [[nodiscard]] int scheduleFrames(Context& context, int sourceReadyFd);
- 
++        [[nodiscard]] std::vector<int> scheduleFrames(
++            Context& context, int sourceReadyFd);
+
          ///
          /// Close a frame generation context
 diff --git a/lsfg-vk-backend/src/lsfgvk.cpp b/lsfg-vk-backend/src/lsfgvk.cpp
-index 2cb4dd1..1f54124 100644
+index 2cb4dd1..31f9e74 100644
 --- a/lsfg-vk-backend/src/lsfgvk.cpp
 +++ b/lsfg-vk-backend/src/lsfgvk.cpp
 @@ -12,6 +12,7 @@
@@ -39,33 +40,43 @@ index 2cb4dd1..1f54124 100644
  #include "lsfg-vk-common/vulkan/vulkan.hpp"
  #include "shaderchains/alpha0.hpp"
  #include "shaderchains/alpha1.hpp"
-@@ -99,18 +100,19 @@ namespace lsfgvk::backend {
+@@ -35,6 +36,7 @@
+ #include <iostream>
+ #include <memory>
+ #include <optional>
++#include <span>
+ #include <stdexcept>
+ #include <string>
+ #include <unordered_map>
+@@ -99,18 +101,19 @@ namespace lsfgvk::backend {
          /// create a context
          /// (see lsfg-vk documentation)
          ContextImpl(const InstanceImpl& instance,
 -            std::pair<int, int> sourceFds, const std::vector<int>& destFds, int syncFd,
 +            std::pair<int, int> sourceFds, const std::vector<int>& destFds,
              VkExtent2D extent, bool hdr, float flow, bool perf);
- 
+
          /// schedule frames
          /// (see lsfg-vk documentation)
 -        void scheduleFrames();
-+        [[nodiscard]] int scheduleFrames(int sourceReadyFd);
++        [[nodiscard]] std::vector<int> scheduleFrames(int sourceReadyFd);
      private:
          std::pair<vk::Image, vk::Image> sourceImages;
          std::vector<vk::Image> destImages;
          vk::Image blackImage;
- 
+
 -        vk::TimelineSemaphore syncSemaphore; // imported
 +        vk::Semaphore sourceReadySemaphore;
-+        vk::Semaphore outputReadySemaphore;
++        std::vector<vk::Semaphore> outputReadySemaphores;
          vk::TimelineSemaphore prepassSemaphore;
          size_t idx{1};
          size_t fidx{0}; // real frame index
-@@ -192,6 +194,12 @@ Instance::Instance(
+@@ -192,6 +195,14 @@ Instance::Instance(
  }
- 
+
  namespace {
++    constexpr size_t mainCommandBufferVariants = 6;
++
 +    constexpr VkImageUsageFlags externalImageUsage =
 +        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 +        VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -75,9 +86,9 @@ index 2cb4dd1..1f54124 100644
      /// find the cache file path
      std::filesystem::path findCacheFilePath() {
          const char* xdgCacheHome = std::getenv("XDG_CACHE_HOME");
-@@ -274,11 +282,11 @@ InstanceImpl::InstanceImpl(vk::PhysicalDeviceSelector selectPhysicalDevice,
+@@ -274,11 +285,11 @@ InstanceImpl::InstanceImpl(vk::PhysicalDeviceSelector selectPhysicalDevice,
  }
- 
+
  Context& Instance::openContext(std::pair<int, int> sourceFds, const std::vector<int>& destFds,
 -        int syncFd, uint32_t width, uint32_t height,
 +        uint32_t width, uint32_t height,
@@ -89,7 +100,7 @@ index 2cb4dd1..1f54124 100644
          extent, hdr, flow, perf
      )).get();
  }
-@@ -291,9 +299,9 @@ namespace {
+@@ -291,9 +302,9 @@ namespace {
          try {
              return {
                  vk::Image(vk, extent, format,
@@ -101,16 +112,16 @@ index 2cb4dd1..1f54124 100644
              };
          } catch (const std::exception& e) {
              throw backend::error("Unable to import destination images", e);
-@@ -309,7 +317,7 @@ namespace {
- 
+@@ -309,7 +320,7 @@ namespace {
+
              for (const auto& fd : destFds)
                  destImages.emplace_back(vk, extent, format,
 -                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, fd);
 +                    externalImageUsage, fd);
- 
+
              return destImages;
          } catch (const std::exception& e) {
-@@ -326,14 +334,6 @@ namespace {
+@@ -326,14 +337,6 @@ namespace {
              throw backend::error("Unable to create black image", e);
          }
      }
@@ -125,9 +136,25 @@ index 2cb4dd1..1f54124 100644
      /// create prepass semaphores
      vk::TimelineSemaphore createPrepassSemaphore(const vk::Vulkan& vk) {
          try {
-@@ -399,14 +399,15 @@ namespace {
+@@ -356,6 +359,15 @@ namespace {
+             throw backend::error("Unable to create command buffers", e);
+         }
+     }
++    /// create one cross-device completion semaphore per generated destination
++    std::vector<vk::Semaphore> createOutputReadySemaphores(
++            const vk::Vulkan& vk, size_t count) {
++        std::vector<vk::Semaphore> semaphores;
++        semaphores.reserve(count);
++        for (size_t i = 0; i < count; ++i)
++            semaphores.emplace_back(vk, true);
++        return semaphores;
++    }
+     /// create context data
+     Ctx createCtx(const InstanceImpl& instance, VkExtent2D extent,
+             bool hdr, float flow, bool perf, size_t count) {
+@@ -399,16 +411,19 @@ namespace {
  }
- 
+
  ContextImpl::ContextImpl(const InstanceImpl& instance,
 -            std::pair<int, int> sourceFds, const std::vector<int>& destFds, int syncFd,
 +            std::pair<int, int> sourceFds, const std::vector<int>& destFds,
@@ -139,12 +166,17 @@ index 2cb4dd1..1f54124 100644
          blackImage(createBlackImage(instance.getVulkan())),
 -        syncSemaphore(importTimelineSemaphore(instance.getVulkan(), syncFd)),
 +        sourceReadySemaphore(instance.getVulkan()),
-+        outputReadySemaphore(instance.getVulkan(), true),
++        outputReadySemaphores(createOutputReadySemaphores(
++            instance.getVulkan(), destFds.size())),
          prepassSemaphore(createPrepassSemaphore(instance.getVulkan())),
-         cmdbufs(createCommandBuffers(instance.getVulkan(), destFds.size() + 1)),
+-        cmdbufs(createCommandBuffers(instance.getVulkan(), destFds.size() + 1)),
++        cmdbufs(createCommandBuffers(instance.getVulkan(),
++            1 + destFds.size() * mainCommandBufferVariants)),
          cmdbufFence(instance.getVulkan()),
-@@ -503,6 +504,10 @@ ContextImpl::ContextImpl(const InstanceImpl& instance,
- 
+         ctx(createCtx(instance, extent, hdr, flow, perf, destFds.size())),
+         mipmaps(ctx, sourceImages),
+@@ -503,6 +518,10 @@ ContextImpl::ContextImpl(const InstanceImpl& instance,
+
      // initialize all images
      std::vector<VkImage> images{};
 +    images.push_back(this->sourceImages.first.handle());
@@ -154,16 +186,40 @@ index 2cb4dd1..1f54124 100644
      images.push_back(this->blackImage.handle());
      mipmaps.prepare(images);
      for (size_t i = 0; i < 7; ++i) {
-@@ -548,7 +553,7 @@ ContextImpl::ContextImpl(const InstanceImpl& instance,
+@@ -546,9 +565,31 @@ ContextImpl::ContextImpl(const InstanceImpl& instance,
+     cmdbuf.insertBarriers(ctx.vk, barriers);
+     cmdbuf.end(ctx.vk);
      cmdbuf.submit(ctx.vk); // wait for completion
++
++    // Main-pass bindings depend only on fidx modulo 2 or 3. Record the six
++    // possible variants once and reuse them after the per-frame fence wait.
++    for (size_t i = 0; i < this->destImages.size(); i++) {
++        const auto& pass = this->passes.at(i);
++        for (size_t variant = 0; variant < mainCommandBufferVariants; variant++) {
++            const auto& mainCmdbuf = this->cmdbufs.at(
++                1 + i * mainCommandBufferVariants + variant);
++            mainCmdbuf.begin(ctx.vk, 0);
++            for (size_t j = 0; j < 7; j++) {
++                pass.gamma0.at(j).render(ctx.vk, mainCmdbuf, variant);
++                pass.gamma1.at(j).render(ctx.vk, mainCmdbuf);
++
++                if (j < 4) continue;
++                pass.delta0.at(j - 4).render(ctx.vk, mainCmdbuf, variant);
++                pass.delta1.at(j - 4).render(ctx.vk, mainCmdbuf);
++            }
++            pass.generate->render(ctx.vk, mainCmdbuf, variant);
++            mainCmdbuf.end(ctx.vk);
++        }
++    }
  }
- 
+
 -void Instance::scheduleFrames(Context& context) { // NOLINT (static)
-+int Instance::scheduleFrames(Context& context, int sourceReadyFd) { // NOLINT (static)
++std::vector<int> Instance::scheduleFrames(
++        Context& context, int sourceReadyFd) { // NOLINT (static)
  #ifdef LSFGVK_TESTING_RENDERDOC
      const auto& impl = this->m_impl;
      if (impl->getRenderDocAPI()) {
-@@ -558,7 +563,7 @@ void Instance::scheduleFrames(Context& context) { // NOLINT (static)
+@@ -558,7 +599,7 @@ void Instance::scheduleFrames(Context& context) { // NOLINT (static)
      }
  #endif
      try {
@@ -172,55 +228,96 @@ index 2cb4dd1..1f54124 100644
      } catch (const std::exception& e) {
          throw backend::error("Unable to schedule frames", e);
      }
-@@ -572,11 +577,12 @@ void Instance::scheduleFrames(Context& context) { // NOLINT (static)
+@@ -572,11 +613,12 @@ void Instance::scheduleFrames(Context& context) { // NOLINT (static)
  #endif
  }
- 
+
 -void Context::scheduleFrames() {
-+int Context::scheduleFrames(int sourceReadyFd) {
++std::vector<int> Context::scheduleFrames(int sourceReadyFd) {
      // wait for previous pre-pass to complete
      if (this->fidx && !this->cmdbufFence.wait(this->ctx.vk))
          throw backend::error("Timeout waiting for previous frame to complete");
      this->cmdbufFence.reset(this->ctx.vk);
 +    this->sourceReadySemaphore.importSyncFd(this->ctx.vk, sourceReadyFd);
- 
+
      // schedule pre-pass
      const auto& cmdbuf = this->cmdbufs.at(0);
-@@ -592,7 +598,7 @@ void Context::scheduleFrames() {
- 
+@@ -592,7 +634,7 @@ void Context::scheduleFrames() {
+
      cmdbuf.end(ctx.vk);
      cmdbuf.submit(this->ctx.vk,
 -        {}, this->syncSemaphore.handle(), this->idx,
 +        { this->sourceReadySemaphore.handle() }, VK_NULL_HANDLE, 0,
          {}, this->prepassSemaphore.handle(), this->idx
      );
- 
-@@ -615,15 +621,18 @@ void Context::scheduleFrames() {
-         pass.generate->render(ctx.vk, cmdbuf, this->fidx);
- 
-         cmdbuf.end(ctx.vk);
-+        std::vector<VkSemaphore> signalSemaphores;
-+        if (i == this->destImages.size() - 1)
-+            signalSemaphores.push_back(this->outputReadySemaphore.handle());
-         cmdbuf.submit(this->ctx.vk,
-             {}, this->prepassSemaphore.handle(), this->idx - 1,
+
+@@ -600,30 +642,24 @@ void Context::scheduleFrames() {
+
+     // schedule main passes
+     for (size_t i = 0; i < this->destImages.size(); i++) {
+-        const auto& cmdbuf = this->cmdbufs.at(i + 1);
+-        cmdbuf.begin(ctx.vk);
+-
+-        const auto& pass = this->passes.at(i);
+-        for (size_t j = 0; j < 7; j++) {
+-            pass.gamma0.at(j).render(ctx.vk, cmdbuf, this->fidx);
+-            pass.gamma1.at(j).render(ctx.vk, cmdbuf);
+-
+-            if (j < 4) continue;
+-            pass.delta0.at(j - 4).render(ctx.vk, cmdbuf, this->fidx);
+-            pass.delta1.at(j - 4).render(ctx.vk, cmdbuf);
+-        }
+-        pass.generate->render(ctx.vk, cmdbuf, this->fidx);
+-
+-        cmdbuf.end(ctx.vk);
+-        cmdbuf.submit(this->ctx.vk,
+-            {}, this->prepassSemaphore.handle(), this->idx - 1,
 -            {}, this->syncSemaphore.handle(), this->idx + i,
-+            signalSemaphores, VK_NULL_HANDLE, 0,
++        const auto& cmdbuf = this->cmdbufs.at(
++            1 + i * mainCommandBufferVariants + this->fidx % mainCommandBufferVariants);
++        const std::array<VkSemaphore, 1> signalSemaphores{
++            this->outputReadySemaphores.at(i).handle()
++        };
++        cmdbuf.submitTimelineWait(this->ctx.vk,
++            this->prepassSemaphore.handle(), this->idx - 1,
++            signalSemaphores,
              i == this->destImages.size() - 1 ? this->cmdbufFence.handle() : VK_NULL_HANDLE
          );
      }
- 
+
 -    this->idx += this->destImages.size();
      this->fidx++;
-+    return this->outputReadySemaphore.exportSyncFd(this->ctx.vk);
++    std::vector<int> outputReadyFds;
++    outputReadyFds.reserve(this->outputReadySemaphores.size());
++    for (const auto& semaphore : this->outputReadySemaphores)
++        outputReadyFds.push_back(semaphore.exportSyncFd(this->ctx.vk));
++    return outputReadyFds;
  }
- 
+
  void Instance::closeContext(const Context& context) {
 diff --git a/lsfg-vk-common/include/lsfg-vk-common/vulkan/command_buffer.hpp b/lsfg-vk-common/include/lsfg-vk-common/vulkan/command_buffer.hpp
-index 0129238..108ed35 100644
+index 0129238..a7c90d1 100644
 --- a/lsfg-vk-common/include/lsfg-vk-common/vulkan/command_buffer.hpp
 +++ b/lsfg-vk-common/include/lsfg-vk-common/vulkan/command_buffer.hpp
-@@ -42,7 +42,9 @@ namespace vk {
+@@ -10,6 +10,7 @@
+ #include "vulkan.hpp"
+
+ #include <cstdint>
++#include <span>
+ #include <utility>
+ #include <vector>
+
+@@ -30,7 +31,8 @@ namespace vk {
+         /// begin recording commands
+         /// @param vk the vulkan instance
+         /// @throws ls::vulkan_error on failure
+-        void begin(const vk::Vulkan& vk) const;
++        void begin(const vk::Vulkan& vk,
++            VkCommandBufferUsageFlags flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) const;
+
+         /// blit an image
+         /// @param vk the vulkan instance
+@@ -42,7 +44,9 @@ namespace vk {
          void blitImage(const vk::Vulkan& vk,
              const std::vector<vk::Barrier>& preBarriers,
              std::pair<VkImage, VkImage> images, VkExtent2D extent,
@@ -228,9 +325,28 @@ index 0129238..108ed35 100644
 +            const std::vector<vk::Barrier>& postBarriers,
 +            VkImageLayout sourceLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 +            VkImageLayout destinationLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) const;
- 
+
          /// insert a bunch of barriers
          /// @param vk the vulkan instance
+@@ -92,6 +96,18 @@ namespace vk {
+             VkSemaphore signalTimelineSemaphore, uint64_t signalValue,
+             VkFence fence = VK_NULL_HANDLE) const;
+
++        /// submit with at most two binary wait and signal semaphores without heap allocation
++        void submitBinary(const vk::Vulkan& vk,
++            std::span<const VkSemaphore> waitSemaphores,
++            std::span<const VkSemaphore> signalSemaphores,
++            VkFence fence = VK_NULL_HANDLE) const;
++
++        /// submit with one timeline wait and at most one binary signal without heap allocation
++        void submitTimelineWait(const vk::Vulkan& vk,
++            VkSemaphore waitTimelineSemaphore, uint64_t waitValue,
++            std::span<const VkSemaphore> signalSemaphores,
++            VkFence fence = VK_NULL_HANDLE) const;
++
+         /// submit the command buffer instantly
+         /// @param vk the vulkan instance
+         /// @throws ls::vulkan_error on failure
 diff --git a/lsfg-vk-common/include/lsfg-vk-common/vulkan/semaphore.hpp b/lsfg-vk-common/include/lsfg-vk-common/vulkan/semaphore.hpp
 index 5dc9d11..f61c6f1 100644
 --- a/lsfg-vk-common/include/lsfg-vk-common/vulkan/semaphore.hpp
@@ -247,7 +363,7 @@ index 5dc9d11..f61c6f1 100644
 +
 +        /// export this binary semaphore payload as a SYNC_FD
 +        [[nodiscard]] int exportSyncFd(const vk::Vulkan& vk) const;
- 
+
          /// get the underlying VkSemaphore handle
          /// @return the VkSemaphore handle
 diff --git a/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp b/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp
@@ -263,12 +379,12 @@ index 18fe083..fe93517 100644
 +        PFN_vkGetPhysicalDeviceImageFormatProperties2 GetPhysicalDeviceImageFormatProperties2;
          PFN_vkCreateDevice CreateDevice;
          PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
- 
+
          // extension functions
          PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
 +        PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
      };
- 
+
      /// initialize vulkan instance function pointers
 diff --git a/lsfg-vk-common/src/configuration/config.cpp b/lsfg-vk-common/src/configuration/config.cpp
 index cee5861..3346162 100644
@@ -277,7 +393,7 @@ index cee5861..3346162 100644
 @@ -130,10 +130,10 @@ namespace {
              .pacing = parcingFromString(tbl["pacing"].value_or<std::string>("none"))
          };
- 
+
 -        if (conf.multiplier <= 1)
 -            throw ls::error("multiplier must be greater than 1");
 -        if (conf.flow_scale < 0.25F || conf.flow_scale > 1.0F)
@@ -286,13 +402,13 @@ index cee5861..3346162 100644
 +            throw ls::error("multiplier must be at least 1");
 +        if (conf.flow_scale < 0.20F || conf.flow_scale > 1.0F)
 +            throw ls::error("flow_scale must be between 0.20 and 1.0");
- 
+
          return conf;
      }
 @@ -180,10 +180,10 @@ namespace {
          const char* pacing = std::getenv("LSFGVK_PACING");
          if (pacing) conf.pacing = parcingFromString(std::string(pacing));
- 
+
 -        if (conf.multiplier <= 1)
 -            throw ls::error("multiplier must be greater than 1");
 -        if (conf.flow_scale < 0.25F || conf.flow_scale > 1.0F)
@@ -301,22 +417,43 @@ index cee5861..3346162 100644
 +            throw ls::error("multiplier must be at least 1");
 +        if (conf.flow_scale < 0.20F || conf.flow_scale > 1.0F)
 +            throw ls::error("flow_scale must be between 0.20 and 1.0");
- 
+
          return conf;
      }
 @@ -280,6 +280,7 @@ WatchedConfig::WatchedConfig() : path(findConfigurationFile()) {
          ConfigFile::createDefaultConfigFile(this->path);
- 
+
      this->configFile = ConfigFile(this->path);
 +    this->last_timestamp = std::filesystem::last_write_time(this->path);
  }
- 
+
  bool WatchedConfig::update() {
 diff --git a/lsfg-vk-common/src/vulkan/command_buffer.cpp b/lsfg-vk-common/src/vulkan/command_buffer.cpp
-index cac4732..046f369 100644
+index cac4732..161b863 100644
 --- a/lsfg-vk-common/src/vulkan/command_buffer.cpp
 +++ b/lsfg-vk-common/src/vulkan/command_buffer.cpp
-@@ -105,7 +105,9 @@ void CommandBuffer::dispatch(const vk::Vulkan& vk,
+@@ -10,6 +10,7 @@
+ #include "lsfg-vk-common/vulkan/shader.hpp"
+ #include "lsfg-vk-common/vulkan/vulkan.hpp"
+
++#include <array>
+ #include <cstdint>
+ #include <optional>
+ #include <utility>
+@@ -55,10 +56,10 @@ namespace {
+ CommandBuffer::CommandBuffer(const vk::Vulkan& vk)
+         : commandBuffer(createCommandBuffer(vk)) {}
+
+-void CommandBuffer::begin(const vk::Vulkan& vk) const {
++void CommandBuffer::begin(const vk::Vulkan& vk, VkCommandBufferUsageFlags flags) const {
+     const VkCommandBufferBeginInfo beginInfo = {
+         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
++        .flags = flags
+     };
+     auto res = vk.df().BeginCommandBuffer(*this->commandBuffer, &beginInfo);
+     if (res != VK_SUCCESS)
+@@ -105,7 +106,9 @@ void CommandBuffer::dispatch(const vk::Vulkan& vk,
  void CommandBuffer::blitImage(const vk::Vulkan& vk,
          const std::vector<vk::Barrier>& preBarriers,
          std::pair<VkImage, VkImage> images, VkExtent2D extent,
@@ -327,7 +464,7 @@ index cac4732..046f369 100644
      vk.df().CmdPipelineBarrier(*this->commandBuffer,
          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
          0,
-@@ -135,8 +137,8 @@ void CommandBuffer::blitImage(const vk::Vulkan& vk,
+@@ -135,8 +138,8 @@ void CommandBuffer::blitImage(const vk::Vulkan& vk,
          }
      };
      vk.df().CmdBlitImage(*this->commandBuffer,
@@ -338,37 +475,116 @@ index cac4732..046f369 100644
          1, &region,
          VK_FILTER_NEAREST
      );
-@@ -210,13 +212,15 @@ void CommandBuffer::submit(const vk::Vulkan& vk,
+@@ -210,13 +213,15 @@ void CommandBuffer::submit(const vk::Vulkan& vk,
          waitSemaphores.push_back(waitTimelineSemaphore);
- 
+
      std::vector<uint64_t> waitValues(waitSemaphores.size(), 0);
 -    waitValues.back() = waitValue;
 +    if (waitTimelineSemaphore)
 +        waitValues.back() = waitValue;
- 
+
      if (signalTimelineSemaphore)
          signalSemaphores.push_back(signalTimelineSemaphore);
- 
+
      std::vector<uint64_t> signalValues(signalSemaphores.size(), 0);
 -    signalValues.back() = signalValue;
 +    if (signalTimelineSemaphore)
 +        signalValues.back() = signalValue;
- 
+
      // create submit info
      const VkTimelineSemaphoreSubmitInfo timelineInfo{
+@@ -244,6 +249,78 @@ void CommandBuffer::submit(const vk::Vulkan& vk,
+         throw ls::vulkan_error(res, "vkQueueSubmit() failed");
+ }
+
++void CommandBuffer::submitBinary(const vk::Vulkan& vk,
++        std::span<const VkSemaphore> waitSemaphores,
++        std::span<const VkSemaphore> signalSemaphores,
++        VkFence fence) const {
++    if (waitSemaphores.size() > 2 || signalSemaphores.size() > 2)
++        throw ls::vulkan_error("submitBinary supports at most two wait and signal semaphores");
++
++    const std::array<uint64_t, 2> waitValues{};
++    const std::array<uint64_t, 2> signalValues{};
++    std::array<VkPipelineStageFlags, 2> stages{};
++    stages.fill(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
++
++    const VkTimelineSemaphoreSubmitInfo timelineInfo{
++        .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
++        .waitSemaphoreValueCount = static_cast<uint32_t>(waitSemaphores.size()),
++        .pWaitSemaphoreValues = waitValues.data(),
++        .signalSemaphoreValueCount = static_cast<uint32_t>(signalSemaphores.size()),
++        .pSignalSemaphoreValues = signalValues.data()
++    };
++    const VkSubmitInfo submitInfo{
++        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
++        .pNext = &timelineInfo,
++        .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
++        .pWaitSemaphores = waitSemaphores.data(),
++        .pWaitDstStageMask = stages.data(),
++        .commandBufferCount = 1,
++        .pCommandBuffers = &*this->commandBuffer,
++        .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
++        .pSignalSemaphores = signalSemaphores.data()
++    };
++    const auto res = vk.df().QueueSubmit(vk.queue(), 1, &submitInfo, fence);
++    if (res != VK_SUCCESS)
++        throw ls::vulkan_error(res, "vkQueueSubmit() failed");
++}
++
++void CommandBuffer::submitTimelineWait(const vk::Vulkan& vk,
++        VkSemaphore waitTimelineSemaphore, uint64_t waitValue,
++        std::span<const VkSemaphore> signalSemaphores,
++        VkFence fence) const {
++    if (!waitTimelineSemaphore || signalSemaphores.size() > 1)
++        throw ls::vulkan_error(
++            "submitTimelineWait requires one timeline wait and at most one binary signal");
++
++    const std::array<VkSemaphore, 1> waitSemaphores{waitTimelineSemaphore};
++    const std::array<uint64_t, 1> waitValues{waitValue};
++    const std::array<uint64_t, 1> signalValues{};
++    const std::array<VkPipelineStageFlags, 1> stages{
++        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
++    };
++    const VkTimelineSemaphoreSubmitInfo timelineInfo{
++        .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
++        .waitSemaphoreValueCount = 1,
++        .pWaitSemaphoreValues = waitValues.data(),
++        .signalSemaphoreValueCount = static_cast<uint32_t>(signalSemaphores.size()),
++        .pSignalSemaphoreValues = signalValues.data()
++    };
++    const VkSubmitInfo submitInfo{
++        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
++        .pNext = &timelineInfo,
++        .waitSemaphoreCount = 1,
++        .pWaitSemaphores = waitSemaphores.data(),
++        .pWaitDstStageMask = stages.data(),
++        .commandBufferCount = 1,
++        .pCommandBuffers = &*this->commandBuffer,
++        .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
++        .pSignalSemaphores = signalSemaphores.data()
++    };
++    const auto res = vk.df().QueueSubmit(vk.queue(), 1, &submitInfo, fence);
++    if (res != VK_SUCCESS)
++        throw ls::vulkan_error(res, "vkQueueSubmit() failed");
++}
++
+
+ void CommandBuffer::submit(const vk::Vulkan& vk) const {
+     const VkSubmitInfo submitInfo{
 diff --git a/lsfg-vk-common/src/vulkan/image.cpp b/lsfg-vk-common/src/vulkan/image.cpp
-index 6eb45c4..8c69c94 100644
+index 6eb45c4..d5188a0 100644
 --- a/lsfg-vk-common/src/vulkan/image.cpp
 +++ b/lsfg-vk-common/src/vulkan/image.cpp
 @@ -6,6 +6,7 @@
  #include "lsfg-vk-common/vulkan/vulkan.hpp"
- 
+
  #include <bitset>
 +#include <iostream>
  #include <optional>
- 
+
  #include <vulkan/vulkan_core.h>
-@@ -39,9 +40,69 @@ namespace {
+@@ -39,9 +40,58 @@ namespace {
              .usage = usage,
              .sharingMode = VK_SHARING_MODE_EXCLUSIVE
          };
@@ -396,12 +612,6 @@ index 6eb45c4..8c69c94 100644
 +            const auto queryResult = vk.fi().GetPhysicalDeviceImageFormatProperties2(
 +                vk.physdev(), &formatInfo, &formatProperties);
 +            const auto& memoryProperties = externalProperties.externalMemoryProperties;
-+            std::cerr << "lsfg-vk: external image OPAQUE_FD capabilities: result="
-+                << queryResult << " features=0x" << std::hex
-+                << memoryProperties.externalMemoryFeatures
-+                << " compatible=0x" << memoryProperties.compatibleHandleTypes
-+                << " exportFromImported=0x" << memoryProperties.exportFromImportedHandleTypes
-+                << std::dec << '\n';
 +            const auto required = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
 +                VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT;
 +            if (queryResult != VK_SUCCESS)
@@ -421,11 +631,6 @@ index 6eb45c4..8c69c94 100644
 +            };
 +            vk.fi().GetPhysicalDeviceExternalBufferProperties(
 +                vk.physdev(), &bufferInfo, &bufferProperties);
-+            std::cerr << "lsfg-vk: external buffer OPAQUE_FD capabilities: features=0x"
-+                << std::hex << bufferProperties.externalMemoryProperties.externalMemoryFeatures
-+                << " compatible=0x"
-+                << bufferProperties.externalMemoryProperties.compatibleHandleTypes
-+                << std::dec << '\n';
 +        }
          auto res = vk.df().CreateImage(vk.dev(), &imageInfo, VK_NULL_HANDLE, &handle);
 -        if (res != VK_SUCCESS)
@@ -436,10 +641,10 @@ index 6eb45c4..8c69c94 100644
 +                << ") returned " << res << '\n';
              throw ls::vulkan_error(res, "vkCreateImage() failed");
 +        }
- 
+
          return ls::owned_ptr<VkImage>(
              new VkImage(handle),
-@@ -92,8 +153,13 @@ namespace {
+@@ -92,8 +142,13 @@ namespace {
              .memoryTypeIndex = *mti
          };
          auto res = vk.df().AllocateMemory(vk.dev(), &memoryInfo, VK_NULL_HANDLE, &handle);
@@ -451,30 +656,30 @@ index 6eb45c4..8c69c94 100644
 +                << ") returned " << res << '\n';
              throw ls::vulkan_error(res, "vkAllocateMemory() failed");
 +        }
- 
+
          res = vk.df().BindImageMemory(vk.dev(), image, handle, 0);
          if (res != VK_SUCCESS)
 diff --git a/lsfg-vk-common/src/vulkan/semaphore.cpp b/lsfg-vk-common/src/vulkan/semaphore.cpp
-index 83ecbd0..057ff00 100644
+index 83ecbd0..660920a 100644
 --- a/lsfg-vk-common/src/vulkan/semaphore.cpp
 +++ b/lsfg-vk-common/src/vulkan/semaphore.cpp
-@@ -5,40 +5,53 @@
+@@ -5,40 +5,48 @@
  #include "lsfg-vk-common/helpers/pointers.hpp"
  #include "lsfg-vk-common/vulkan/vulkan.hpp"
- 
+
 -#include <optional>
 +#include <iostream>
- 
+
  #include <vulkan/vulkan_core.h>
- 
+
  using namespace vk;
- 
+
  namespace {
 -    /// create a semaphore
 -    ls::owned_ptr<VkSemaphore> createSemaphore(const vk::Vulkan& vk, std::optional<int> fd) {
 +    ls::owned_ptr<VkSemaphore> createSemaphore(const vk::Vulkan& vk, bool exportSyncFd) {
          VkSemaphore handle{};
- 
+
          const VkExportSemaphoreCreateInfo exportInfo{
              .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO,
 -            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT
@@ -488,7 +693,7 @@ index 83ecbd0..057ff00 100644
 -        auto res = vk.df().CreateSemaphore(vk.dev(), &semaphoreInfo, VK_NULL_HANDLE, &handle);
 -        if (res != VK_SUCCESS)
 -            throw ls::vulkan_error(res, "vkCreateSemaphore() failed");
- 
+
 -        if (fd.has_value()) {
 -            // import semaphore from fd
 -            const VkImportSemaphoreFdInfoKHR importInfo{
@@ -509,11 +714,6 @@ index 83ecbd0..057ff00 100644
 -                throw ls::vulkan_error(res, "vkImportSemaphoreFdKHR() failed");
 +            vk.fi().GetPhysicalDeviceExternalSemaphoreProperties(
 +                vk.physdev(), &externalInfo, &properties);
-+            std::cerr << "lsfg-vk: external semaphore SYNC_FD capabilities: features=0x"
-+                << std::hex << properties.externalSemaphoreFeatures
-+                << " compatible=0x" << properties.compatibleHandleTypes
-+                << " exportFromImported=0x" << properties.exportFromImportedHandleTypes
-+                << std::dec << '\n';
 +            const auto required = VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT |
 +                VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT;
 +            if ((properties.externalSemaphoreFeatures & required) != required)
@@ -528,12 +728,12 @@ index 83ecbd0..057ff00 100644
 +                << exportSyncFd << ") returned " << res << '\n';
 +            throw ls::vulkan_error(res, "vkCreateSemaphore() failed");
          }
- 
+
          return ls::owned_ptr<VkSemaphore>(
-@@ -50,5 +63,35 @@ namespace {
+@@ -50,5 +58,35 @@ namespace {
      }
  }
- 
+
 -Semaphore::Semaphore(const vk::Vulkan& vk, std::optional<int> fd)
 -    : semaphore(createSemaphore(vk, fd)) {}
 +Semaphore::Semaphore(const vk::Vulkan& vk, bool exportSyncFd)
@@ -587,7 +787,7 @@ index 092b874..5c6798c 100644
 +                "vkGetPhysicalDeviceImageFormatProperties2"),
          .CreateDevice = ipa<PFN_vkCreateDevice>(mpa, i, "vkCreateDevice"),
          .GetDeviceProcAddr = ipa<PFN_vkGetDeviceProcAddr>(mpa, i, "vkGetDeviceProcAddr"),
- 
+
          .GetPhysicalDeviceSurfaceCapabilitiesKHR = graphical ?
              ipa<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(mpa, i,
 -                "vkGetPhysicalDeviceSurfaceCapabilitiesKHR") : nullptr
@@ -597,7 +797,7 @@ index 092b874..5c6798c 100644
 +                "vkGetPhysicalDeviceSurfacePresentModesKHR") : nullptr
      };
  }
- 
+
 diff --git a/lsfg-vk-layer/src/entrypoint.cpp b/lsfg-vk-layer/src/entrypoint.cpp
 index 6256b9f..5103a74 100644
 --- a/lsfg-vk-layer/src/entrypoint.cpp
@@ -618,11 +818,11 @@ index 6256b9f..5103a74 100644
 +            *swapchain = VK_NULL_HANDLE;
 +            std::cerr << "lsfg-vk: rolled back failed swapchain creation\n";
 +        };
- 
+
          try {
              // retire old swapchain
 @@ -337,10 +349,12 @@ namespace {
- 
+
              return res;
          } catch (const ls::vulkan_error& e) {
 +            rollbackSwapchain();
@@ -635,7 +835,7 @@ index 6256b9f..5103a74 100644
              std::cerr << "- " << e.what() << '\n';
              return VK_ERROR_INITIALIZATION_FAILED;
 @@ -363,20 +377,42 @@ namespace {
- 
+
          if (reload) {
              try {
 +                if (!instance_info->swapchains.empty()) {
@@ -651,7 +851,7 @@ index 6256b9f..5103a74 100644
                      layer_info->root.removeSwapchainContext(swapchain);
 -                    layer_info->root.createSwapchainContext(vk, swapchain, info);
                  }
- 
+
 -                std::cerr << "lsfg-vk: updated lsfg-vk configuration\n";
 +                std::cerr << "lsfg-vk: updated configuration; requesting one swapchain "
 +                    "recreation for present mode, image count, and framegen resources\n";
@@ -665,7 +865,7 @@ index 6256b9f..5103a74 100644
                  std::cerr << "- " << e.what() << '\n';
              }
          }
- 
+
 +        // A 1x profile is Winlator's in-game Off state. Keep the negotiated layer
 +        // alive so a later config reload can enable generation without restarting,
 +        // while forwarding presentation unchanged.
@@ -688,7 +888,7 @@ index 00da4d1..ddcaa12 100644
 @@ -159,7 +159,26 @@ void Root::modifySwapchainCreateInfo(const vk::Vulkan& vk, VkSwapchainCreateInfo
      if (res != VK_SUCCESS)
          throw ls::vulkan_error(res, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR() failed");
- 
+
 -    context_ModifySwapchainCreateInfo(*this->active_profile, caps.maxImageCount, createInfo);
 +    uint32_t presentModeCount{};
 +    res = vk.fi().GetPhysicalDeviceSurfacePresentModesKHR(
@@ -710,7 +910,7 @@ index 00da4d1..ddcaa12 100644
 +
 +    context_ModifySwapchainCreateInfo(*this->active_profile, caps.maxImageCount,
 +        availablePresentModes, createInfo);
- 
+
      finish();
  }
 @@ -168,6 +187,8 @@ void Root::createSwapchainContext(const vk::Vulkan& vk,
@@ -720,7 +920,7 @@ index 00da4d1..ddcaa12 100644
 +    if (this->active_profile->multiplier == 1)
 +        return;
      const auto& profile = *this->active_profile;
- 
+
      if (!this->backend.has_value()) { // emplace backend late, due to loader bug
 diff --git a/lsfg-vk-layer/src/instance.hpp b/lsfg-vk-layer/src/instance.hpp
 index 35083b6..327fa88 100644
@@ -729,7 +929,7 @@ index 35083b6..327fa88 100644
 @@ -27,6 +27,12 @@ namespace lsfgvk::layer {
          /// @return true if active
          [[nodiscard]] bool active() const { return this->active_profile.has_value(); }
- 
+
 +        /// check whether the selected profile currently generates frames
 +        /// @return true for multipliers greater than passthrough (1x)
 +        [[nodiscard]] bool generating() const {
@@ -740,85 +940,27 @@ index 35083b6..327fa88 100644
          /// @return true if the configuration was updated
          bool update();
 diff --git a/lsfg-vk-layer/src/swapchain.cpp b/lsfg-vk-layer/src/swapchain.cpp
-index 85033ae..f2e44d7 100644
+index 85033ae..a1a774e 100644
 --- a/lsfg-vk-layer/src/swapchain.cpp
 +++ b/lsfg-vk-layer/src/swapchain.cpp
-@@ -11,10 +11,12 @@
+@@ -11,11 +11,14 @@
  #include "lsfg-vk-common/vulkan/vulkan.hpp"
- 
+
  #include <algorithm>
-+#include <chrono>
++#include <array>
  #include <cstddef>
  #include <cstdint>
  #include <exception>
  #include <functional>
 +#include <iostream>
  #include <optional>
++#include <span>
  #include <utility>
  #include <vector>
-@@ -24,7 +26,72 @@
- using namespace lsfgvk;
+
+@@ -25,6 +28,12 @@ using namespace lsfgvk;
  using namespace lsfgvk::layer;
- 
-+void Swapchain::recordInputFrame() {
-+    const auto now = std::chrono::steady_clock::now();
-+    if (diagnosticStart.time_since_epoch().count() == 0)
-+        diagnosticStart = now;
-+    if (lastInputTime.time_since_epoch().count() != 0)
-+        diagnosticInputIntervalMs +=
-+            std::chrono::duration<double, std::milli>(now - lastInputTime).count();
-+    lastInputTime = now;
-+    diagnosticInputs++;
-+}
-+
-+void Swapchain::recordPresent(const char* kind, size_t interpolationIndex, uint32_t imageIndex) {
-+    const auto now = std::chrono::steady_clock::now();
-+    if (lastPresentTime.time_since_epoch().count() != 0)
-+        diagnosticPresentIntervalMs +=
-+            std::chrono::duration<double, std::milli>(now - lastPresentTime).count();
-+    lastPresentTime = now;
-+    diagnosticPresents++;
-+    if (interpolationIndex > 0)
-+        diagnosticGenerated++;
-+    if (this->fidx < 8) {
-+        std::cerr << "lsfg-vk: present-map real_frame=" << this->fidx
-+            << " kind=" << kind << " interpolated_index=" << interpolationIndex
-+            << "/" << (this->profile.multiplier - 1)
-+            << " swapchain_image=" << imageIndex << '\n';
-+    }
-+}
-+
-+void Swapchain::reportFrameDiagnostics() {
-+    const auto now = std::chrono::steady_clock::now();
-+    const double elapsed = std::chrono::duration<double>(now - diagnosticStart).count();
-+    if (elapsed < 1.0)
-+        return;
-+    const double inputFps = static_cast<double>(diagnosticInputs) / elapsed;
-+    const double presentFps = static_cast<double>(diagnosticPresents) / elapsed;
-+    const double inputInterval = diagnosticInputs > 1
-+        ? diagnosticInputIntervalMs / static_cast<double>(diagnosticInputs - 1) : 0.0;
-+    const double presentInterval = diagnosticPresents > 1
-+        ? diagnosticPresentIntervalMs / static_cast<double>(diagnosticPresents - 1) : 0.0;
-+    const double framegenSubmit = diagnosticInputs
-+        ? diagnosticFramegenSubmitMs / static_cast<double>(diagnosticInputs) : 0.0;
-+    std::cerr << "lsfg-vk: frame-stats input_fps=" << inputFps
-+        << " input_interval_ms=" << inputInterval
-+        << " multiplier=" << this->profile.multiplier
-+        << " generated=" << diagnosticGenerated
-+        << " presents=" << diagnosticPresents
-+        << " present_fps=" << presentFps
-+        << " present_interval_ms=" << presentInterval
-+        << " framegen_cpu_submit_ms=" << framegenSubmit
-+        << " expected_presents_per_input=" << this->profile.multiplier << '\n';
-+    diagnosticStart = now;
-+    diagnosticInputs = 0;
-+    diagnosticGenerated = 0;
-+    diagnosticPresents = 0;
-+    diagnosticInputIntervalMs = 0.0;
-+    diagnosticPresentIntervalMs = 0.0;
-+    diagnosticFramegenSubmitMs = 0.0;
-+}
-+
+
  namespace {
 +    constexpr VkImageUsageFlags externalImageUsage =
 +        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
@@ -829,22 +971,18 @@ index 85033ae..f2e44d7 100644
      VkImageMemoryBarrier barrierHelper(VkImage handle,
              VkAccessFlags srcAccessMask,
              VkAccessFlags dstAccessMask,
-@@ -51,19 +118,54 @@ namespace {
+@@ -51,17 +60,33 @@ namespace {
  }
- 
+
  void layer::context_ModifySwapchainCreateInfo(const ls::GameConf& profile, uint32_t maxImages,
 +        const std::vector<VkPresentModeKHR>& availablePresentModes,
          VkSwapchainCreateInfoKHR& createInfo) {
-+    const auto requestedPresentMode = createInfo.presentMode;
-+    const auto requestedImageCount = createInfo.minImageCount;
      createInfo.imageUsage |=
          VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
- 
+
 +    // Multiplier 1 keeps the layer loaded and the swapchain ready for hot reload,
 +    // but preserves the application's original pacing and image count.
 +    if (profile.multiplier == 1) {
-+        std::cerr << "lsfg-vk: swapchain passthrough multiplier=1 present_mode="
-+            << requestedPresentMode << " min_images=" << requestedImageCount << '\n';
 +        return;
 +    }
 +
@@ -853,7 +991,7 @@ index 85033ae..f2e44d7 100644
              createInfo.minImageCount += profile.multiplier;
              if (maxImages && createInfo.minImageCount > maxImages)
                  createInfo.minImageCount = maxImages;
- 
+
 -            createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 +            // Bannerlator uses MAILBOX on its host renderer while frame generation
 +            // is multiplying. Official Winlator 11.1 has no equivalent Vulkan host
@@ -867,32 +1005,15 @@ index 85033ae..f2e44d7 100644
 +                : VK_PRESENT_MODE_FIFO_KHR;
              break;
      }
-+    const bool mailboxSupported = std::find(
-+        availablePresentModes.begin(), availablePresentModes.end(),
-+        VK_PRESENT_MODE_MAILBOX_KHR) != availablePresentModes.end();
-+    std::cerr << "lsfg-vk: available_present_modes=[";
-+    for (size_t i = 0; i < availablePresentModes.size(); i++) {
-+        if (i) std::cerr << ',';
-+        std::cerr << availablePresentModes.at(i);
-+    }
-+    std::cerr << "] mailbox_supported=" << (mailboxSupported ? "true" : "false") << '\n';
-+    std::cerr << "lsfg-vk: swapchain framegen multiplier=" << profile.multiplier
-+        << " requested_present_mode=" << requestedPresentMode
-+        << " selected_present_mode=" << createInfo.presentMode
-+        << " requested_min_images=" << requestedImageCount
-+        << " selected_min_images=" << createInfo.minImageCount
-+        << " max_images=" << maxImages << '\n';
  }
- 
- Swapchain::Swapchain(const vk::Vulkan& vk, backend::Instance& backend,
-@@ -80,23 +182,50 @@ Swapchain::Swapchain(const vk::Vulkan& vk, backend::Instance& backend,
+@@ -80,23 +105,50 @@ Swapchain::Swapchain(const vk::Vulkan& vk, backend::Instance& backend,
      for (int& fd : sourceFds)
          this->sourceImages.emplace_back(vk,
              extent, hdr ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_R8G8B8A8_UNORM,
 -            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 +            externalImageUsage,
              std::nullopt, &fd);
- 
+
      this->destinationImages.reserve(destinationFds.size());
      for (int& fd : destinationFds)
          this->destinationImages.emplace_back(vk,
@@ -900,7 +1021,7 @@ index 85033ae..f2e44d7 100644
 -            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 +            externalImageUsage,
              std::nullopt, &fd);
- 
+
 -    int syncFd{};
 -    this->syncSemaphore.emplace(vk, 0, std::nullopt, &syncFd);
 +    // Both Vulkan devices access aliasing VkImages backed by the same OPAQUE_FD.
@@ -926,13 +1047,13 @@ index 85033ae..f2e44d7 100644
 +        initializeLayouts.insertBarriers(vk, initialBarriers);
 +        initializeLayouts.end(vk);
 +        initializeLayouts.submit(vk);
-+        std::cerr << "lsfg-vk: initialized " << initialBarriers.size()
-+            << " external image alias layout(s) as GENERAL" << '\n';
 +    }
 +
 +    this->sourceReadySemaphore.emplace(vk, true);
-+    this->outputReadySemaphore.emplace(vk);
- 
++    this->outputReadySemaphores.reserve(this->destinationImages.size());
++    for (size_t i = 0; i < this->destinationImages.size(); ++i)
++        this->outputReadySemaphores.emplace_back(vk);
+
      try {
          this->ctx = ls::owned_ptr<ls::R<backend::Context>>(
              new ls::R<backend::Context>(backend.openContext(
@@ -941,10 +1062,10 @@ index 85033ae..f2e44d7 100644
                  extent.width, extent.height,
                  hdr, 1.0F / this->profile.flow_scale, this->profile.performance_mode
              )),
-@@ -119,30 +248,34 @@ Swapchain::Swapchain(const vk::Vulkan& vk, backend::Instance& backend,
+@@ -119,13 +171,9 @@ Swapchain::Swapchain(const vk::Vulkan& vk, backend::Instance& backend,
          });
      }
- 
+
 -    const size_t frames = std::max(this->info.images.size(), this->destinationImages.size() + 2);
 -    for (size_t i = 0; i < frames; i++) {
 -        this->postCopySemaphores.emplace_back(
@@ -956,15 +1077,12 @@ index 85033ae..f2e44d7 100644
 +    for (size_t i = 0; i < this->info.images.size(); i++)
 +        this->imageStates.push_back({vk::Semaphore(vk), vk::Semaphore(vk)});
  }
- 
+
  VkResult Swapchain::present(const vk::Vulkan& vk,
-         VkQueue queue, VkSwapchainKHR swapchain,
-         void* next_chain, uint32_t imageIdx,
-         const std::vector<VkSemaphore>& semaphores) {
-+    recordInputFrame();
+@@ -135,14 +183,21 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
      const auto& swapchainImage = this->info.images.at(imageIdx);
      const auto& sourceImage = this->sourceImages.at(this->fidx % 2);
- 
+
 -    // schedule frame generation
 -    try {
 -        this->instance.get().scheduleFrames(this->ctx.get());
@@ -982,23 +1100,23 @@ index 85033ae..f2e44d7 100644
 +    originalState.pendingPresent = false;
 +    originalState.acquired = true;
 +    originalState.lastAcquireSequence = ++this->acquireSequence;
- 
+
 -    // update present mode when not using pacing
 +    // Keep dynamic-present-mode metadata aligned with the mode selected when the
 +    // frame-generation swapchain was created (MAILBOX, or FIFO fallback).
      if (this->profile.pacing == ls::Pacing::None) {
  #pragma clang diagnostic push
  #pragma clang diagnostic ignored "-Wunknown-warning-option"
-@@ -152,7 +285,7 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -152,7 +207,7 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
              if (info->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT) {
                  for (size_t i = 0; i < info->swapchainCount; i++)
                      const_cast<VkPresentModeKHR*>(info->pPresentModes)[i] =
 -                        VK_PRESENT_MODE_FIFO_KHR;
 +                        this->info.presentMode;
              }
- 
+
              info = reinterpret_cast<VkSwapchainPresentModeInfoEXT*>(const_cast<void*>(info->pNext));
-@@ -180,8 +313,8 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -180,8 +235,8 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
              barrierHelper(sourceImage.handle(),
                  VK_ACCESS_NONE,
                  VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1009,7 +1127,7 @@ index 85033ae..f2e44d7 100644
              ),
          },
          { swapchainImage, sourceImage.handle() },
-@@ -193,17 +326,30 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -193,17 +248,30 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                  VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
              ),
@@ -1018,22 +1136,22 @@ index 85033ae..f2e44d7 100644
 +        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 +        VK_IMAGE_LAYOUT_GENERAL
      );
- 
+
      cmdbuf.end(vk);
      cmdbuf.submit(vk,
          semaphores, VK_NULL_HANDLE, 0,
 -        {}, this->syncSemaphore->handle(), this->idx++
 +        { this->sourceReadySemaphore->handle() }, VK_NULL_HANDLE, 0
      );
- 
+
 +    try {
-+        const auto framegenSubmitStart = std::chrono::steady_clock::now();
 +        const int sourceReadyFd = this->sourceReadySemaphore->exportSyncFd(vk);
-+        const int outputReadyFd = this->instance.get().scheduleFrames(
++        const auto outputReadyFds = this->instance.get().scheduleFrames(
 +            this->ctx.get(), sourceReadyFd);
-+        this->outputReadySemaphore->importSyncFd(vk, outputReadyFd);
-+        diagnosticFramegenSubmitMs += std::chrono::duration<double, std::milli>(
-+            std::chrono::steady_clock::now() - framegenSubmitStart).count();
++        if (outputReadyFds.size() != this->outputReadySemaphores.size())
++            throw ls::error("backend returned an invalid output semaphore count");
++        for (size_t i = 0; i < outputReadyFds.size(); ++i)
++            this->outputReadySemaphores.at(i).importSyncFd(vk, outputReadyFds.at(i));
 +    } catch (const std::exception& e) {
 +        throw ls::error("failed to schedule frames", e);
 +    }
@@ -1042,11 +1160,11 @@ index 85033ae..f2e44d7 100644
 -        auto& pcs = this->postCopySemaphores.at(this->idx % this->postCopySemaphores.size());
          auto& destinationImage = this->destinationImages.at(i);
          auto& pass = this->passes.at(i);
- 
-@@ -217,6 +363,27 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+
+@@ -217,6 +285,17 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
          if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
              throw ls::vulkan_error(res, "vkAcquireNextImageKHR() failed");
- 
+
 +        auto& imageState = this->imageStates.at(aqImageIdx);
 +        if (imageState.acquired) {
 +            std::cerr << "lsfg-vk: IMAGE_REUSE_HAZARD image=" << aqImageIdx
@@ -1055,23 +1173,13 @@ index 85033ae..f2e44d7 100644
 +            throw ls::vulkan_error(VK_ERROR_INITIALIZATION_FAILED,
 +                "vkAcquireNextImageKHR returned an image already acquired");
 +        }
-+        const bool releasedPreviousPresent = imageState.pendingPresent;
 +        imageState.pendingPresent = false;
 +        imageState.acquired = true;
 +        imageState.lastAcquireSequence = ++this->acquireSequence;
-+        if (this->fidx < 16) {
-+            std::cerr << "lsfg-vk: acquire sequence=" << imageState.lastAcquireSequence
-+                << " real_frame=" << this->fidx << " interpolation=" << (i + 1)
-+                << " image=" << aqImageIdx
-+                << " previous_frame=" << imageState.lastFrameId
-+                << " released_previous_present=" << releasedPreviousPresent
-+                << " semaphore=per_image_generated_ready" << '\n';
-+        }
-+
          const auto& aquiredSwapchainImage = this->info.images.at(aqImageIdx);
- 
+
          // copy backend destination image into swapchain image
-@@ -228,8 +395,8 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -228,8 +307,8 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
                  barrierHelper(destinationImage.handle(),
                      VK_ACCESS_NONE,
                      VK_ACCESS_TRANSFER_READ_BIT,
@@ -1082,7 +1190,7 @@ index 85033ae..f2e44d7 100644
                  ),
                  barrierHelper(aquiredSwapchainImage,
                      VK_ACCESS_NONE,
-@@ -247,23 +414,21 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -247,24 +326,26 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
                  ),
@@ -1091,8 +1199,8 @@ index 85033ae..f2e44d7 100644
 +            VK_IMAGE_LAYOUT_GENERAL,
 +            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
          );
- 
-         std::vector<VkSemaphore> waitSemaphores{ pass.acquireSemaphore.handle() };
+
+-        std::vector<VkSemaphore> waitSemaphores{ pass.acquireSemaphore.handle() };
 -        if (i) { // non-first pass
 -            const auto& prevPCS = this->postCopySemaphores.at((this->idx - 1) % this->postCopySemaphores.size());
 -            waitSemaphores.push_back(prevPCS.second.handle());
@@ -1101,21 +1209,28 @@ index 85033ae..f2e44d7 100644
 -        const std::vector<VkSemaphore> signalSemaphores{
 -            pcs.first.handle(),
 -            pcs.second.handle()
--        };
-+        if (i == 0)
-+            waitSemaphores.push_back(this->outputReadySemaphore->handle());
-+        std::vector<VkSemaphore> signalSemaphores{imageState.generatedReady.handle()};
-+        if (i == this->destinationImages.size() - 1)
-+            signalSemaphores.push_back(originalState.originalReady.handle());
- 
++        const std::array<VkSemaphore, 2> waitSemaphores{
++            pass.acquireSemaphore.handle(),
++            this->outputReadySemaphores.at(i).handle()
++        };
++        const std::array<VkSemaphore, 2> signalSemaphores{
++            imageState.generatedReady.handle(),
++            i == this->destinationImages.size() - 1
++                ? originalState.originalReady.handle() : VK_NULL_HANDLE
+         };
++        const auto signalCount = i == this->destinationImages.size() - 1 ? 2U : 1U;
+
          cmdbuf.end(vk);
-         cmdbuf.submit(vk,
+-        cmdbuf.submit(vk,
 -            waitSemaphores, this->syncSemaphore->handle(), this->idx,
-+            waitSemaphores, VK_NULL_HANDLE, 0,
-             signalSemaphores, VK_NULL_HANDLE, 0,
+-            signalSemaphores, VK_NULL_HANDLE, 0,
++        cmdbuf.submitBinary(vk,
++            waitSemaphores,
++            std::span(signalSemaphores).first(signalCount),
              i == this->destinationImages.size() - 1 ? this->renderFence->handle() : VK_NULL_HANDLE
          );
-@@ -273,7 +438,7 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+
+@@ -273,7 +354,7 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
              .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
              .pNext = i ? nullptr : next_chain,
              .waitSemaphoreCount = 1,
@@ -1124,7 +1239,7 @@ index 85033ae..f2e44d7 100644
              .swapchainCount = 1,
              .pSwapchains = &swapchain,
              .pImageIndices = &aqImageIdx,
-@@ -282,16 +447,17 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -282,16 +363,16 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
              &presentInfo);
          if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
              throw ls::vulkan_error(res, "vkQueuePresentKHR() failed");
@@ -1133,9 +1248,8 @@ index 85033ae..f2e44d7 100644
 +        imageState.acquired = false;
 +        imageState.pendingPresent = true;
 +        imageState.lastFrameId = this->fidx;
-+        recordPresent("interpolated", i + 1, aqImageIdx);
      }
- 
+
      // present original swapchain image
 -    auto& lastPCS = this->postCopySemaphores.at((this->idx - 1) % this->postCopySemaphores.size());
      const VkPresentInfoKHR presentInfo{
@@ -1146,56 +1260,39 @@ index 85033ae..f2e44d7 100644
          .swapchainCount = 1,
          .pSwapchains = &swapchain,
          .pImageIndices = &imageIdx,
-@@ -299,7 +465,12 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
+@@ -299,6 +380,9 @@ VkResult Swapchain::present(const vk::Vulkan& vk,
      auto res = vk.df().QueuePresentKHR(queue, &presentInfo);
      if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
          throw ls::vulkan_error(res, "vkQueuePresentKHR() failed");
 +    originalState.acquired = false;
 +    originalState.pendingPresent = true;
 +    originalState.lastFrameId = this->fidx;
-+    recordPresent("original", 0, imageIdx);
- 
+
      this->fidx++;
-+    reportFrameDiagnostics();
      return res;
- }
 diff --git a/lsfg-vk-layer/src/swapchain.hpp b/lsfg-vk-layer/src/swapchain.hpp
-index 3c711a0..8e08774 100644
+index 3c711a0..c96bcf9 100644
 --- a/lsfg-vk-layer/src/swapchain.hpp
 +++ b/lsfg-vk-layer/src/swapchain.hpp
-@@ -12,6 +12,7 @@
- #include "lsfg-vk-common/vulkan/timeline_semaphore.hpp"
- #include "lsfg-vk-common/vulkan/vulkan.hpp"
- 
-+#include <chrono>
- #include <cstdint>
- #include <utility>
- #include <vector>
-@@ -34,6 +35,7 @@ namespace lsfgvk::layer {
+@@ -34,6 +34,7 @@ namespace lsfgvk::layer {
      /// @param maxImages maximum number of images supported by the surface
      /// @param createInfo swapchain create info to modify
      void context_ModifySwapchainCreateInfo(const ls::GameConf& profile, uint32_t maxImages,
 +        const std::vector<VkPresentModeKHR>& availablePresentModes,
          VkSwapchainCreateInfoKHR& createInfo);
- 
+
      /// swapchain context for a layer instance
-@@ -59,9 +61,14 @@ namespace lsfgvk::layer {
-             void* next_chain, uint32_t imageIdx,
-             const std::vector<VkSemaphore>& semaphores);
+@@ -61,7 +62,8 @@ namespace lsfgvk::layer {
      private:
-+        void recordInputFrame();
-+        void recordPresent(const char* kind, size_t interpolationIndex, uint32_t imageIndex);
-+        void reportFrameDiagnostics();
-+
          std::vector<vk::Image> sourceImages;
          std::vector<vk::Image> destinationImages;
 -        ls::lazy<vk::TimelineSemaphore> syncSemaphore;
 +        ls::lazy<vk::Semaphore> sourceReadySemaphore;
-+        ls::lazy<vk::Semaphore> outputReadySemaphore;
- 
++        std::vector<vk::Semaphore> outputReadySemaphores;
+
          ls::lazy<vk::CommandBuffer> renderCommandBuffer;
          ls::lazy<vk::Fence> renderFence;
-@@ -70,12 +77,29 @@ namespace lsfgvk::layer {
+@@ -70,13 +72,20 @@ namespace lsfgvk::layer {
              vk::Semaphore acquireSemaphore;
          };
          std::vector<RenderPass> passes;
@@ -1210,20 +1307,755 @@ index 3c711a0..8e08774 100644
 +        };
 +        std::vector<SwapchainImageState> imageStates;
 +        uint64_t acquireSequence{};
- 
+
          ls::R<backend::Instance> instance;
          ls::owned_ptr<ls::R<backend::Context>> ctx;
 -        size_t idx{1};
          size_t fidx{0}; // real frame index
-+        std::chrono::steady_clock::time_point diagnosticStart{};
-+        std::chrono::steady_clock::time_point lastInputTime{};
-+        std::chrono::steady_clock::time_point lastPresentTime{};
-+        uint64_t diagnosticInputs{};
-+        uint64_t diagnosticGenerated{};
-+        uint64_t diagnosticPresents{};
-+        double diagnosticInputIntervalMs{};
-+        double diagnosticPresentIntervalMs{};
-+        double diagnosticFramegenSubmitMs{};
- 
+-
          ls::GameConf profile;
          SwapchainInfo info;
+     };
+diff --git a/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp b/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp
+index fe93517..b062ffd 100644
+--- a/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp
++++ b/lsfg-vk-common/include/lsfg-vk-common/vulkan/vulkan.hpp
+@@ -4,6 +4,7 @@
+
+ #include "../helpers/pointers.hpp"
+
++#include <array>
+ #include <bitset>
+ #include <cstdint>
+ #include <filesystem>
+@@ -25,7 +26,9 @@ namespace vk {
+         PFN_vkGetPhysicalDeviceProperties2 GetPhysicalDeviceProperties2;
+         PFN_vkGetPhysicalDeviceQueueFamilyProperties GetPhysicalDeviceQueueFamilyProperties;
+         PFN_vkGetPhysicalDeviceFeatures2 GetPhysicalDeviceFeatures2;
++        PFN_vkGetPhysicalDeviceFormatProperties GetPhysicalDeviceFormatProperties;
+         PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
++        PFN_vkGetPhysicalDeviceMemoryProperties2 GetPhysicalDeviceMemoryProperties2;
+         PFN_vkGetPhysicalDeviceExternalSemaphoreProperties GetPhysicalDeviceExternalSemaphoreProperties;
+         PFN_vkGetPhysicalDeviceExternalBufferProperties GetPhysicalDeviceExternalBufferProperties;
+         PFN_vkGetPhysicalDeviceImageFormatProperties2 GetPhysicalDeviceImageFormatProperties2;
+@@ -52,6 +55,67 @@ namespace vk {
+         )
+     >&;
+
++    enum class GpuFamily {
++        Unknown,
++        AdrenoA6xx,
++        AdrenoA7xx,
++        AdrenoA8xx
++    };
++
++    enum class AdvisoryTier {
++        Unknown,
++        Low,
++        Mid,
++        High
++    };
++
++    struct FormatCapabilities {
++        bool sampled{};
++        bool storage{};
++        bool transferSrc{};
++        bool transferDst{};
++    };
++
++    /// Read-only physical-device capability snapshot. It is diagnostic in Part 5 Round 2:
++    /// compatibility findings do not gate or alter frame generation yet.
++    struct GpuCapabilities {
++        uint32_t apiVersion{};
++        uint32_t vendorId{};
++        uint32_t deviceId{};
++        uint32_t driverVersion{};
++        std::string deviceName{};
++        std::string driverName{};
++        std::string driverInfo{};
++        GpuFamily family{GpuFamily::Unknown};
++        AdvisoryTier tier{AdvisoryTier::Unknown};
++
++        bool computeQueue{};
++        uint32_t computeQueueFamily{};
++        uint32_t computeQueueCount{};
++        VkQueueFlags computeQueueFlags{};
++        bool timelineSemaphore{};
++        bool externalMemoryOpaqueFd{};
++        bool externalMemoryOpaqueFdHdr{};
++        bool externalSemaphoreSyncFd{};
++        bool fp16{};
++
++        FormatCapabilities r8{};
++        FormatCapabilities rgba8{};
++        FormatCapabilities rgba16f{};
++        std::array<uint32_t, 3> maxComputeWorkGroupCount{};
++        std::array<uint32_t, 3> maxComputeWorkGroupSize{};
++        uint32_t maxComputeWorkGroupInvocations{};
++        uint32_t maxComputeSharedMemorySize{};
++
++        bool memoryBudgetAvailable{};
++        uint64_t deviceLocalBudget{};
++        uint64_t deviceLocalUsage{};
++
++        bool supported{};
++        std::vector<std::string> reasons{};
++        std::vector<std::string> warnings{};
++    };
++
+     /// vulkan device function pointers
+     struct VulkanDeviceFuncs {
+         PFN_vkGetDeviceQueue GetDeviceQueue;
+@@ -217,6 +281,8 @@ namespace vk {
+         /// check if fp16 is supported
+         /// @return true if fp16 is supported
+         [[nodiscard]] bool supportsFP16() const { return this->fp16; }
++        /// get the immutable physical-device capability snapshot
++        [[nodiscard]] const GpuCapabilities& capabilities() const { return this->gpuCapabilities; }
+
+         /// get instance-level function pointers
+         /// @return the instance function pointers
+@@ -232,6 +298,7 @@ namespace vk {
+         VulkanInstanceFuncs instance_funcs;
+
+         VkPhysicalDevice phys_dev;
++        GpuCapabilities gpuCapabilities;
+         uint32_t queueFamilyIdx;
+         bool fp16;
+
+diff --git a/lsfg-vk-common/src/vulkan/vulkan.cpp b/lsfg-vk-common/src/vulkan/vulkan.cpp
+index 5c6798c..7563880 100644
+--- a/lsfg-vk-common/src/vulkan/vulkan.cpp
++++ b/lsfg-vk-common/src/vulkan/vulkan.cpp
+@@ -5,13 +5,17 @@
+ #include "lsfg-vk-common/helpers/pointers.hpp"
+
+ #include <array>
++#include <algorithm>
+ #include <bitset>
++#include <cctype>
+ #include <cstddef>
+ #include <cstdint>
+ #include <filesystem>
+ #include <fstream>
+ #include <ios>
++#include <iostream>
+ #include <optional>
++#include <ranges>
+ #include <string>
+ #include <vector>
+
+@@ -149,6 +153,261 @@ namespace {
+         return supportedFeaturesVulkan12.shaderFloat16 == VK_TRUE;
+     }
+
++    bool hasExtension(const VulkanInstanceFuncs& fi, VkPhysicalDevice physdev,
++            const char* name) {
++        uint32_t count{};
++        if (fi.EnumerateDeviceExtensionProperties(physdev, nullptr, &count, nullptr) != VK_SUCCESS)
++            return false;
++        std::vector<VkExtensionProperties> extensions(count);
++        if (fi.EnumerateDeviceExtensionProperties(
++                physdev, nullptr, &count, extensions.data()) != VK_SUCCESS)
++            return false;
++        return std::ranges::any_of(extensions, [name](const VkExtensionProperties& extension) {
++            return std::string(extension.extensionName) == name;
++        });
++    }
++
++    FormatCapabilities queryFormatCapabilities(const VulkanInstanceFuncs& fi,
++            VkPhysicalDevice physdev, VkFormat format) {
++        VkFormatProperties properties{};
++        fi.GetPhysicalDeviceFormatProperties(physdev, format, &properties);
++        const auto flags = properties.optimalTilingFeatures;
++        return {
++            .sampled = (flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0,
++            .storage = (flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0,
++            .transferSrc = (flags & VK_FORMAT_FEATURE_TRANSFER_SRC_BIT) != 0,
++            .transferDst = (flags & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0
++        };
++    }
++
++    bool queryExternalImageSupport(const VulkanInstanceFuncs& fi,
++            VkPhysicalDevice physdev, VkFormat format) {
++        constexpr VkImageUsageFlags usage =
++            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
++            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
++        const VkPhysicalDeviceExternalImageFormatInfo externalInfo{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
++            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT
++        };
++        const VkPhysicalDeviceImageFormatInfo2 formatInfo{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
++            .pNext = &externalInfo,
++            .format = format,
++            .type = VK_IMAGE_TYPE_2D,
++            .tiling = VK_IMAGE_TILING_OPTIMAL,
++            .usage = usage
++        };
++        VkExternalImageFormatProperties externalProperties{
++            .sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES
++        };
++        VkImageFormatProperties2 properties{
++            .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
++            .pNext = &externalProperties
++        };
++        if (fi.GetPhysicalDeviceImageFormatProperties2(
++                physdev, &formatInfo, &properties) != VK_SUCCESS)
++            return false;
++        const auto features = externalProperties.externalMemoryProperties.externalMemoryFeatures;
++        constexpr auto required = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
++            VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT;
++        return (features & required) == required;
++    }
++
++    GpuFamily classifyFamily(const std::string& deviceName) {
++        std::string name(deviceName);
++        std::ranges::transform(name, name.begin(), [](unsigned char c) {
++            return static_cast<char>(std::tolower(c));
++        });
++        if (name.find("adreno") == std::string::npos)
++            return GpuFamily::Unknown;
++        if (name.find("(tm) 6") != std::string::npos || name.find("adreno 6") != std::string::npos)
++            return GpuFamily::AdrenoA6xx;
++        if (name.find("(tm) 7") != std::string::npos || name.find("adreno 7") != std::string::npos)
++            return GpuFamily::AdrenoA7xx;
++        if (name.find("(tm) 8") != std::string::npos || name.find("adreno 8") != std::string::npos)
++            return GpuFamily::AdrenoA8xx;
++        return GpuFamily::Unknown;
++    }
++
++    GpuCapabilities collectGpuCapabilities(const VulkanInstanceFuncs& fi,
++            VkPhysicalDevice physdev) {
++        const bool driverPropertiesAvailable =
++            hasExtension(fi, physdev, VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
++        VkPhysicalDeviceDriverProperties driverProperties{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES
++        };
++        VkPhysicalDeviceProperties2 properties{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
++        };
++        fi.GetPhysicalDeviceProperties2(physdev, &properties);
++        if (VK_API_VERSION_MAJOR(properties.properties.apiVersion) > 1 ||
++                VK_API_VERSION_MINOR(properties.properties.apiVersion) >= 2 ||
++                driverPropertiesAvailable) {
++            properties.pNext = &driverProperties;
++            fi.GetPhysicalDeviceProperties2(physdev, &properties);
++        }
++
++        VkPhysicalDeviceVulkan12Features vulkan12{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
++        };
++        VkPhysicalDeviceFeatures2 features{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
++            .pNext = &vulkan12
++        };
++        fi.GetPhysicalDeviceFeatures2(physdev, &features);
++
++        uint32_t queueCount{};
++        fi.GetPhysicalDeviceQueueFamilyProperties(physdev, &queueCount, nullptr);
++        std::vector<VkQueueFamilyProperties> queues(queueCount);
++        fi.GetPhysicalDeviceQueueFamilyProperties(physdev, &queueCount, queues.data());
++        uint32_t computeFamily = UINT32_MAX;
++        VkQueueFamilyProperties computeQueue{};
++        for (uint32_t i = 0; i < queueCount; ++i) {
++            if ((queues.at(i).queueFlags & VK_QUEUE_COMPUTE_BIT) != 0) {
++                computeFamily = i;
++                computeQueue = queues.at(i);
++                break;
++            }
++        }
++
++        const VkPhysicalDeviceExternalSemaphoreInfo semaphoreInfo{
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO,
++            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT
++        };
++        VkExternalSemaphoreProperties semaphoreProperties{
++            .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES
++        };
++        fi.GetPhysicalDeviceExternalSemaphoreProperties(
++            physdev, &semaphoreInfo, &semaphoreProperties);
++        constexpr auto requiredSemaphoreFeatures =
++            VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT |
++            VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT;
++
++        GpuCapabilities result{
++            .apiVersion = properties.properties.apiVersion,
++            .vendorId = properties.properties.vendorID,
++            .deviceId = properties.properties.deviceID,
++            .driverVersion = properties.properties.driverVersion,
++            .deviceName = properties.properties.deviceName,
++            .driverName = driverProperties.driverName,
++            .driverInfo = driverProperties.driverInfo,
++            .family = classifyFamily(properties.properties.deviceName),
++            .computeQueue = computeFamily != UINT32_MAX,
++            .computeQueueFamily = computeFamily,
++            .computeQueueCount = computeQueue.queueCount,
++            .computeQueueFlags = computeQueue.queueFlags,
++            .timelineSemaphore = vulkan12.timelineSemaphore == VK_TRUE,
++            .externalMemoryOpaqueFd =
++                hasExtension(fi, physdev, VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME) &&
++                queryExternalImageSupport(fi, physdev, VK_FORMAT_R8G8B8A8_UNORM),
++            .externalMemoryOpaqueFdHdr =
++                hasExtension(fi, physdev, VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME) &&
++                queryExternalImageSupport(fi, physdev, VK_FORMAT_R16G16B16A16_SFLOAT),
++            .externalSemaphoreSyncFd =
++                hasExtension(fi, physdev, VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) &&
++                (semaphoreProperties.externalSemaphoreFeatures & requiredSemaphoreFeatures)
++                    == requiredSemaphoreFeatures,
++            .fp16 = vulkan12.shaderFloat16 == VK_TRUE,
++            .r8 = queryFormatCapabilities(fi, physdev, VK_FORMAT_R8_UNORM),
++            .rgba8 = queryFormatCapabilities(fi, physdev, VK_FORMAT_R8G8B8A8_UNORM),
++            .rgba16f = queryFormatCapabilities(fi, physdev, VK_FORMAT_R16G16B16A16_SFLOAT),
++            .maxComputeWorkGroupCount = {
++                properties.properties.limits.maxComputeWorkGroupCount[0],
++                properties.properties.limits.maxComputeWorkGroupCount[1],
++                properties.properties.limits.maxComputeWorkGroupCount[2]
++            },
++            .maxComputeWorkGroupSize = {
++                properties.properties.limits.maxComputeWorkGroupSize[0],
++                properties.properties.limits.maxComputeWorkGroupSize[1],
++                properties.properties.limits.maxComputeWorkGroupSize[2]
++            },
++            .maxComputeWorkGroupInvocations =
++                properties.properties.limits.maxComputeWorkGroupInvocations,
++            .maxComputeSharedMemorySize =
++                properties.properties.limits.maxComputeSharedMemorySize
++        };
++
++        result.memoryBudgetAvailable = hasExtension(fi, physdev, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
++        if (result.memoryBudgetAvailable) {
++            VkPhysicalDeviceMemoryBudgetPropertiesEXT budget{
++                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT
++            };
++            VkPhysicalDeviceMemoryProperties2 memory{
++                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
++                .pNext = &budget
++            };
++            fi.GetPhysicalDeviceMemoryProperties2(physdev, &memory);
++            for (uint32_t i = 0; i < memory.memoryProperties.memoryHeapCount; ++i) {
++                if ((memory.memoryProperties.memoryHeaps[i].flags &
++                        VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) == 0)
++                    continue;
++                result.deviceLocalBudget += budget.heapBudget[i];
++                result.deviceLocalUsage += budget.heapUsage[i];
++            }
++        }
++
++        const auto require = [&result](bool condition, const char* reason) {
++            if (!condition) result.reasons.emplace_back(reason);
++        };
++        require(result.apiVersion >= VK_API_VERSION_1_2, "Vulkan 1.2 unavailable");
++        require(result.computeQueue, "compute queue unavailable");
++        require(result.timelineSemaphore, "timeline semaphore unavailable");
++        require(result.externalMemoryOpaqueFd, "RGBA8 OPAQUE_FD import/export unavailable");
++        require(result.externalSemaphoreSyncFd, "SYNC_FD semaphore import/export unavailable");
++        require(result.r8.sampled && result.r8.storage, "R8 sampled/storage unavailable");
++        require(result.rgba8.sampled && result.rgba8.storage &&
++            result.rgba8.transferSrc && result.rgba8.transferDst,
++            "RGBA8 required image features unavailable");
++        require(result.rgba16f.sampled && result.rgba16f.storage,
++            "RGBA16F sampled/storage unavailable");
++        require(result.maxComputeWorkGroupSize[0] >= 32 &&
++            result.maxComputeWorkGroupSize[1] >= 32 &&
++            result.maxComputeWorkGroupInvocations >= 1024,
++            "32x32/1024 compute workgroup unsupported");
++        result.supported = result.reasons.empty();
++        if (!result.fp16) result.warnings.emplace_back("FP16 unavailable; FP32 fallback selected");
++        if (!result.externalMemoryOpaqueFdHdr)
++            result.warnings.emplace_back("RGBA16F OPAQUE_FD unavailable; HDR external path unsupported");
++        if (!result.memoryBudgetAvailable)
++            result.warnings.emplace_back("VK_EXT_memory_budget unavailable");
++        return result;
++    }
++
++    const char* familyName(GpuFamily family) {
++        switch (family) {
++            case GpuFamily::AdrenoA6xx: return "A6xx";
++            case GpuFamily::AdrenoA7xx: return "A7xx";
++            case GpuFamily::AdrenoA8xx: return "A8xx";
++            default: return "UNKNOWN";
++        }
++    }
++
++    void printGpuCapabilities(const GpuCapabilities& capabilities) {
++        std::cerr << "lsfg-vk: GPU capabilities: device=\"" << capabilities.deviceName
++            << "\", family=" << familyName(capabilities.family)
++            << ", Vulkan=" << VK_API_VERSION_MAJOR(capabilities.apiVersion) << '.'
++            << VK_API_VERSION_MINOR(capabilities.apiVersion) << '.'
++            << VK_API_VERSION_PATCH(capabilities.apiVersion)
++            << ", driver=\"" << capabilities.driverName << "\""
++            << ", baseline_supported=" << capabilities.supported
++            << ", compute=" << capabilities.computeQueue
++            << ", timeline=" << capabilities.timelineSemaphore
++            << ", opaque_fd=" << capabilities.externalMemoryOpaqueFd
++            << ", sync_fd=" << capabilities.externalSemaphoreSyncFd
++            << ", fp16=" << capabilities.fp16
++            << ", formats=" << (capabilities.r8.sampled && capabilities.r8.storage &&
++                capabilities.rgba8.sampled && capabilities.rgba8.storage &&
++                capabilities.rgba16f.sampled && capabilities.rgba16f.storage)
++            << ", max_workgroup=" << capabilities.maxComputeWorkGroupSize[0] << 'x'
++            << capabilities.maxComputeWorkGroupSize[1] << '/'
++            << capabilities.maxComputeWorkGroupInvocations
++            << ", memory_budget=" << capabilities.memoryBudgetAvailable << '\n';
++        for (const auto& reason : capabilities.reasons)
++            std::cerr << "lsfg-vk: GPU capability reason: " << reason << '\n';
++        for (const auto& warning : capabilities.warnings)
++            std::cerr << "lsfg-vk: GPU capability warning: " << warning << '\n';
++    }
++
+     template<typename T>
+     T dpa(const VulkanInstanceFuncs& funcs, VkDevice device, const char* name) {
+         T func = reinterpret_cast<T>(
+@@ -300,8 +559,12 @@ VulkanInstanceFuncs vk::initVulkanInstanceFuncs(VkInstance i, PFN_vkGetInstanceP
+                 "vkGetPhysicalDeviceQueueFamilyProperties"),
+         .GetPhysicalDeviceFeatures2 = graphical ?
+             nullptr : ipa<PFN_vkGetPhysicalDeviceFeatures2>(mpa, i, "vkGetPhysicalDeviceFeatures2"),
++        .GetPhysicalDeviceFormatProperties = ipa<PFN_vkGetPhysicalDeviceFormatProperties>(mpa, i,
++            "vkGetPhysicalDeviceFormatProperties"),
+         .GetPhysicalDeviceMemoryProperties = ipa<PFN_vkGetPhysicalDeviceMemoryProperties>(mpa, i,
+             "vkGetPhysicalDeviceMemoryProperties"),
++        .GetPhysicalDeviceMemoryProperties2 = ipa<PFN_vkGetPhysicalDeviceMemoryProperties2>(mpa, i,
++            "vkGetPhysicalDeviceMemoryProperties2"),
+         .GetPhysicalDeviceExternalSemaphoreProperties =
+             ipa<PFN_vkGetPhysicalDeviceExternalSemaphoreProperties>(mpa, i,
+                 "vkGetPhysicalDeviceExternalSemaphoreProperties"),
+@@ -422,9 +685,10 @@ Vulkan::Vulkan(const std::string& appName, version appVersion,
+         *this->instance,
+         selectPhysicalDevice
+     )),
++    gpuCapabilities(collectGpuCapabilities(this->instance_funcs, this->phys_dev)),
+     queueFamilyIdx(findQFI(this->instance_funcs, this->phys_dev,
+         isGraphical ? VK_QUEUE_GRAPHICS_BIT : VK_QUEUE_COMPUTE_BIT)),
+-    fp16(checkFP16(this->instance_funcs, this->phys_dev)),
++    fp16(this->gpuCapabilities.fp16),
+     device(createLogicalDevice(this->instance_funcs,
+         this->phys_dev,
+         this->queueFamilyIdx,
+@@ -446,6 +710,7 @@ Vulkan::Vulkan(const std::string& appName, version appVersion,
+         *this->device, cachefile
+     )),
+     cachefile(cachefile) {
++    printGpuCapabilities(this->gpuCapabilities);
+ }
+
+ Vulkan::Vulkan(VkInstance instance, VkDevice device,
+@@ -458,6 +723,7 @@ Vulkan::Vulkan(VkInstance instance, VkDevice device,
+     instance(new VkInstance(instance)),
+     instance_funcs(instanceFuncs),
+     phys_dev(physdev),
++    gpuCapabilities{},
+     queueFamilyIdx(findQFI(this->instance_funcs, this->phys_dev,
+         isGraphical ? VK_QUEUE_GRAPHICS_BIT : VK_QUEUE_COMPUTE_BIT)),
+     fp16(false),
+diff --git a/lsfg-vk-layer/src/instance.cpp b/lsfg-vk-layer/src/instance.cpp
+index ddcaa12..b314dc0 100644
+--- a/lsfg-vk-layer/src/instance.cpp
++++ b/lsfg-vk-layer/src/instance.cpp
+@@ -177,6 +177,19 @@ void Root::modifySwapchainCreateInfo(const vk::Vulkan& vk, VkSwapchainCreateInfo
+         availablePresentModes.resize(presentModeCount);
+     }
+
++    if (!this->presentCapabilitiesReported) {
++        const auto hasPresentMode = [&availablePresentModes](VkPresentModeKHR mode) {
++            return std::find(availablePresentModes.begin(), availablePresentModes.end(), mode)
++                != availablePresentModes.end();
++        };
++        std::cerr << "lsfg-vk: Surface present capabilities: MAILBOX="
++            << hasPresentMode(VK_PRESENT_MODE_MAILBOX_KHR)
++            << ", FIFO=" << hasPresentMode(VK_PRESENT_MODE_FIFO_KHR) << '\n';
++        if (!hasPresentMode(VK_PRESENT_MODE_MAILBOX_KHR))
++            std::cerr << "lsfg-vk: GPU capability warning: MAILBOX unavailable; FIFO fallback selected\n";
++        this->presentCapabilitiesReported = true;
++    }
++
+     context_ModifySwapchainCreateInfo(*this->active_profile, caps.maxImageCount,
+         availablePresentModes, createInfo);
+
+diff --git a/lsfg-vk-layer/src/instance.hpp b/lsfg-vk-layer/src/instance.hpp
+index 327fa88..f7815ba 100644
+--- a/lsfg-vk-layer/src/instance.hpp
++++ b/lsfg-vk-layer/src/instance.hpp
+@@ -81,6 +81,7 @@ namespace lsfgvk::layer {
+
+         ls::lazy<backend::Instance> backend;
+         std::unordered_map<VkSwapchainKHR, Swapchain> swapchains;
++        mutable bool presentCapabilitiesReported{false};
+     };
+
+ }
+diff --git a/lsfg-vk-common/src/vulkan/vulkan.cpp b/lsfg-vk-common/src/vulkan/vulkan.cpp
+index 7563880..3b857b3 100644
+--- a/lsfg-vk-common/src/vulkan/vulkan.cpp
++++ b/lsfg-vk-common/src/vulkan/vulkan.cpp
+@@ -140,19 +140,6 @@ namespace {
+         throw ls::vulkan_error("no queue family with requested flags found");
+     }
+
+-    /// check for fp16 support
+-    bool checkFP16(const VulkanInstanceFuncs& fi, VkPhysicalDevice physdev) {
+-        VkPhysicalDeviceVulkan12Features supportedFeaturesVulkan12{
+-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
+-        };
+-        VkPhysicalDeviceFeatures2 supportedFeatures{
+-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+-            .pNext = &supportedFeaturesVulkan12
+-        };
+-        fi.GetPhysicalDeviceFeatures2(physdev, &supportedFeatures);
+-        return supportedFeaturesVulkan12.shaderFloat16 == VK_TRUE;
+-    }
+-
+     bool hasExtension(const VulkanInstanceFuncs& fi, VkPhysicalDevice physdev,
+             const char* name) {
+         uint32_t count{};
+@@ -229,6 +216,8 @@ namespace {
+         return GpuFamily::Unknown;
+     }
+
++    void printGpuCapabilities(const GpuCapabilities& capabilities);
++
+     GpuCapabilities collectGpuCapabilities(const VulkanInstanceFuncs& fi,
+             VkPhysicalDevice physdev) {
+         const bool driverPropertiesAvailable =
+@@ -370,6 +359,7 @@ namespace {
+             result.warnings.emplace_back("RGBA16F OPAQUE_FD unavailable; HDR external path unsupported");
+         if (!result.memoryBudgetAvailable)
+             result.warnings.emplace_back("VK_EXT_memory_budget unavailable");
++        printGpuCapabilities(result);
+         return result;
+     }
+
+@@ -709,9 +699,7 @@ Vulkan::Vulkan(const std::string& appName, version appVersion,
+     pipelineCache(createPipelineCache(this->device_funcs,
+         *this->device, cachefile
+     )),
+-    cachefile(cachefile) {
+-    printGpuCapabilities(this->gpuCapabilities);
+-}
++    cachefile(cachefile) {}
+
+ Vulkan::Vulkan(VkInstance instance, VkDevice device,
+         VkPhysicalDevice physdev,
+         VulkanInstanceFuncs instanceFuncs,
+         VulkanDeviceFuncs deviceFuncs,
+         bool isGraphical,
+         std::optional<PFN_vkSetDeviceLoaderData> setLoaderData,
+         const std::optional<std::filesystem::path>& cachefile) :
+     instance(new VkInstance(instance)),
+
+
+diff --git a/lsfg-vk-backend/src/lsfgvk.cpp b/lsfg-vk-backend/src/lsfgvk.cpp
+index 31f9e74..a048fa4 100644
+--- a/lsfg-vk-backend/src/lsfgvk.cpp
++++ b/lsfg-vk-backend/src/lsfgvk.cpp
+@@ -7,6 +7,7 @@
+ #include "helpers/utils.hpp"
+ #include "lsfg-vk-common/helpers/errors.hpp"
+ #include "lsfg-vk-common/helpers/pointers.hpp"
++#include "lsfg-vk-common/helpers/presets.hpp"
+ #include "lsfg-vk-common/vulkan/buffer.hpp"
+ #include "lsfg-vk-common/vulkan/command_buffer.hpp"
+ #include "lsfg-vk-common/vulkan/fence.hpp"
+@@ -281,6 +282,8 @@ InstanceImpl::InstanceImpl(vk::PhysicalDeviceSelector selectPhysicalDevice,
+ #ifdef LSFGVK_TESTING_RENDERDOC
+     this->renderdoc = loadRenderDocIntegration();
+ #endif
++    const auto recommendations = advisory::getPresetRecommendations(this->vk.capabilities());
++    advisory::printPresetRecommendations(recommendations);
+     vk.persistPipelineCache(); // will silently fail
+ }
+
+diff --git a/lsfg-vk-common/CMakeLists.txt b/lsfg-vk-common/CMakeLists.txt
+index b03c78d..0d11efc 100644
+--- a/lsfg-vk-common/CMakeLists.txt
++++ b/lsfg-vk-common/CMakeLists.txt
+@@ -3,6 +3,7 @@ set(COMMON_SOURCES
+     "src/configuration/detection.cpp"
+     "src/helpers/errors.cpp"
+     "src/helpers/paths.cpp"
++    "src/helpers/presets.cpp"
+     "src/vulkan/buffer.cpp"
+     "src/vulkan/command_buffer.cpp"
+     "src/vulkan/descriptor_pool.cpp"
+diff --git a/lsfg-vk-common/include/lsfg-vk-common/helpers/presets.hpp b/lsfg-vk-common/include/lsfg-vk-common/helpers/presets.hpp
+new file mode 100644
+index 0000000..030b19f
+--- /dev/null
++++ b/lsfg-vk-common/include/lsfg-vk-common/helpers/presets.hpp
+@@ -0,0 +1,39 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later */
++
++#pragma once
++
++#include "../vulkan/vulkan.hpp"
++
++#include <cstdint>
++#include <string>
++#include <vector>
++
++namespace lsfgvk::advisory {
++    enum class PresetName { Unknown, Performance, Balanced, Quality };
++    enum class RecommendationConfidence { Low, Medium, High };
++
++    struct PresetRecommendation {
++        PresetName name{PresetName::Unknown};
++        float flowScaleMin{};
++        float flowScaleMax{};
++        bool performanceMode{true};
++        uint32_t multiplierMin{2};
++        uint32_t multiplierMax{4};
++        RecommendationConfidence confidence{RecommendationConfidence::Low};
++        std::vector<std::string> reasons{};
++        std::vector<std::string> warnings{};
++    };
++
++    struct PresetRecommendations {
++        PresetName preferred{PresetName::Unknown};
++        RecommendationConfidence confidence{RecommendationConfidence::Low};
++        std::vector<PresetRecommendation> presets{};
++        std::vector<std::string> reasons{};
++        std::vector<std::string> warnings{};
++    };
++
++    /// Build advisory-only presets from static GPU capabilities. Never mutates configuration.
++    [[nodiscard]] PresetRecommendations getPresetRecommendations(
++        const vk::GpuCapabilities& capabilities);
++    void printPresetRecommendations(const PresetRecommendations& recommendations);
++}
+diff --git a/lsfg-vk-common/src/helpers/presets.cpp b/lsfg-vk-common/src/helpers/presets.cpp
+new file mode 100644
+index 0000000..b77ab2f
+--- /dev/null
++++ b/lsfg-vk-common/src/helpers/presets.cpp
+@@ -0,0 +1,131 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later */
++
++#include "lsfg-vk-common/helpers/presets.hpp"
++
++#include <iostream>
++
++using namespace lsfgvk::advisory;
++
++namespace {
++    const char* presetName(PresetName name) {
++        switch (name) {
++            case PresetName::Performance: return "PERFORMANCE";
++            case PresetName::Balanced: return "BALANCED";
++            case PresetName::Quality: return "QUALITY";
++            default: return "UNKNOWN";
++        }
++    }
++
++    const char* confidenceName(RecommendationConfidence confidence) {
++        switch (confidence) {
++            case RecommendationConfidence::High: return "HIGH";
++            case RecommendationConfidence::Medium: return "MEDIUM";
++            default: return "LOW";
++        }
++    }
++
++    PresetRecommendation performancePreset(const vk::GpuCapabilities& capabilities) {
++        PresetRecommendation result{
++            .name = PresetName::Performance,
++            .flowScaleMin = 0.20F,
++            .flowScaleMax = 0.35F,
++            .performanceMode = true,
++            .confidence = capabilities.supported ?
++                RecommendationConfidence::Medium : RecommendationConfidence::Low,
++            .reasons = {
++                "lowest-cost advisory range for the current flow-resolution model",
++                "Performance Mode ON is the validated path"
++            },
++            .warnings = {
++                "lower flow resolution can reduce edge precision",
++                "multiplier remains manual and must be validated per game"
++            }
++        };
++        if (!capabilities.fp16)
++            result.reasons.emplace_back("FP32 fallback benefits from the conservative cost target");
++        return result;
++    }
++
++    PresetRecommendation balancedPreset(const vk::GpuCapabilities& capabilities) {
++        PresetRecommendation result{
++            .name = PresetName::Balanced,
++            .flowScaleMin = 0.35F,
++            .flowScaleMax = 0.50F,
++            .performanceMode = true,
++            .confidence = RecommendationConfidence::Low,
++            .reasons = {
++                "moderate flow-resolution range while preserving the validated shader path"
++            },
++            .warnings = {
++                "static capabilities do not measure game FPS, GPU headroom or latency",
++                "multiplier remains manual and 2x should be validated first"
++            }
++        };
++        if (capabilities.fp16)
++            result.reasons.emplace_back("FP16 shader path is available");
++        else
++            result.warnings.emplace_back("FP16 unavailable; FP32 may increase GPU cost");
++        return result;
++    }
++
++    PresetRecommendation qualityPreset(const vk::GpuCapabilities& capabilities) {
++        PresetRecommendation result{
++            .name = PresetName::Quality,
++            .flowScaleMin = 0.50F,
++            .flowScaleMax = 0.80F,
++            .performanceMode = true,
++            .confidence = RecommendationConfidence::Low,
++            .reasons = {
++                "higher flow resolution can improve motion-field and edge precision",
++                "Performance Mode ON preserves the stable host path"
++            },
++            .warnings = {
++                "Performance Mode OFF is a known unstable path and is never recommended",
++                "higher flow resolution can reduce base FPS and increase latency",
++                "actual visual quality depends on temporal input and game content"
++            }
++        };
++        if (!capabilities.memoryBudgetAvailable)
++            result.warnings.emplace_back("memory budget unavailable; headroom is unknown");
++        if (!capabilities.fp16)
++            result.warnings.emplace_back("FP16 unavailable; Quality cost uses FP32 fallback");
++        return result;
++    }
++}
++
++PresetRecommendations lsfgvk::advisory::getPresetRecommendations(
++        const vk::GpuCapabilities& capabilities) {
++    PresetRecommendations result{};
++    result.presets.reserve(3);
++    result.presets.emplace_back(performancePreset(capabilities));
++    result.presets.emplace_back(balancedPreset(capabilities));
++    result.presets.emplace_back(qualityPreset(capabilities));
++
++    result.warnings.emplace_back("advisory only; user configuration is never changed");
++    result.warnings.emplace_back("actual game FPS, temporal stability and input latency are unknown");
++    result.warnings.emplace_back("multiplier remains a manual user choice");
++    if (!capabilities.memoryBudgetAvailable)
++        result.warnings.emplace_back("memory budget unavailable");
++    if (!capabilities.supported) {
++        result.reasons.emplace_back("required capability evaluation reported missing requirements");
++        return result;
++    }
++
++    // Static capabilities cannot predict a game's headroom. Prefer only the lowest-cost
++    // validated path; Balanced and Quality remain visible advisory alternatives.
++    result.preferred = PresetName::Performance;
++    result.confidence = RecommendationConfidence::Medium;
++    result.reasons.emplace_back("required static capabilities are available");
++    result.reasons.emplace_back("runtime FPS/headroom are unknown, so conservative cost is preferred");
++    if (capabilities.fp16)
++        result.reasons.emplace_back("FP16 path is available");
++    return result;
++}
++
++void lsfgvk::advisory::printPresetRecommendations(
++        const PresetRecommendations& recommendations) {
++    std::cerr << "lsfg-vk: Advisory preset: preferred="
++        << presetName(recommendations.preferred)
++        << ", confidence=" << confidenceName(recommendations.confidence)
++        << ", applied=false, performance_mode_off=unstable\n";
++}

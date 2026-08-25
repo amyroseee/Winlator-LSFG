@@ -15,3 +15,9 @@ local.properties
 *.log
 **/__pycache__/
 *.py[cod]
+
+# Private/local LSFG analysis inputs and extracted shader dumps
+**/Lossless.dll
+**/*.spv
+**/*.spvasm
+**/*reflection*.json
