@@ -211,6 +211,23 @@
     <string name="custom_device">Dispositivo Personalizado</string>
     <string name="reinstall_system_files">Reinstalar Arquivos do Sistema</string>
     <string name="do_you_want_to_reinstall_system_files">Você deseja reinstalar os arquivos do sistema?</string>
+    <string name="select_lossless_dll">Selecionar Lossless.dll</string>
+    <string name="lossless_dll_not_selected">Lossless.dll não selecionada</string>
+    <string name="lossless_dll_selected">Lossless.dll selecionada</string>
+    <string name="lossless_dll_invalid">Selecione um arquivo .dll legível</string>
+    <string name="lossless_dll_imported">Lossless.dll importada</string>
+    <string name="lossless_dll_import_failed">Não foi possível importar a Lossless.dll</string>
+    <string name="enable_lsfg_vk">Ativar LSFG-VK</string>
+    <string name="lsfg_requires_lossless_dll">Selecione a Lossless.dll nas Configurações gerais antes de usar o LSFG-VK</string>
+    <string name="lsfg_vk">LSFG-VK</string>
+    <string name="lsfg_multiplier">Geração de Quadros</string>
+    <string name="lsfg_off">Desativado</string>
+    <string name="lsfg_multiplier_2x">2x</string>
+    <string name="lsfg_multiplier_3x">3x</string>
+    <string name="lsfg_multiplier_4x">4x</string>
+    <string name="lsfg_flow_scale">Flow Scale</string>
+    <string name="lsfg_performance_mode">Modo de Desempenho</string>
+    <string name="unable_to_apply_lsfg_settings">Não foi possível aplicar as configurações do LSFG-VK</string>
     <string name="mouse">Mouse</string>
     <string name="cursor_size">Tamanho do Cursor</string>
     <string name="color">Cor</string>
@@ -290,4 +307,5 @@
     <string name="full">Completo</string>
     <string name="renderer">Renderizador</string>
     <string name="default_no_override">Padrão (Sem sobrescrita)</string>
+    <string name="show_gamehub_hud">Mostrar HUD de FPS GameHub</string>
 </resources>

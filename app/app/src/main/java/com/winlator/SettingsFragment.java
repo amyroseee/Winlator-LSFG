@@ -4,12 +4,16 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.OpenableColumns;
+import android.system.Os;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,6 +63,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
@@ -179,6 +185,10 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.BTReinstallSystemFiles).setOnClickListener((v) -> {
             ContentDialog.confirm(context, R.string.do_you_want_to_reinstall_system_files, () -> RootFSInstaller.install((MainActivity)getActivity()));
         });
+
+        final TextView tvLSFGDLLStatus = view.findViewById(R.id.TVLSFGDLLStatus);
+        updateLSFGDLLStatus(context, tvLSFGDLLStatus);
+        view.findViewById(R.id.BTSelectLosslessDLL).setOnClickListener((v) -> selectLosslessDLL(tvLSFGDLLStatus));
 
         loadGamepadPlayerConfigs(view);
 
@@ -374,6 +384,73 @@ public class SettingsFragment extends Fragment {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+    }
+
+    private void selectLosslessDLL(TextView statusView) {
+        selectWineFileCallback = (uri) -> importLosslessDLL(uri, statusView);
+
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+    }
+
+    private void importLosslessDLL(Uri uri, TextView statusView) {
+        final Context context = getContext();
+        String displayName = getDocumentDisplayName(context, uri);
+        if (displayName == null || !displayName.toLowerCase(java.util.Locale.ROOT).endsWith(".dll")) {
+            AppUtils.showToast(context, R.string.lossless_dll_invalid);
+            return;
+        }
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            File dllDir = new File(context.getFilesDir(), "lsfg-vk");
+            File dllFile = new File(dllDir, "Lossless.dll");
+            File stagingFile = new File(dllDir, "Lossless.dll.staging");
+            boolean success = false;
+
+            try {
+                if (!dllDir.isDirectory() && !dllDir.mkdirs()) throw new IllegalStateException("Unable to create LSFG-VK directory");
+                stagingFile.delete();
+                try (InputStream inputStream = context.getContentResolver().openInputStream(uri);
+                     FileOutputStream outputStream = new FileOutputStream(stagingFile)) {
+                    if (inputStream == null) throw new IllegalStateException("Unable to read selected file");
+                    byte[] buffer = new byte[8192];
+                    int count;
+                    while ((count = inputStream.read(buffer)) != -1) outputStream.write(buffer, 0, count);
+                    outputStream.flush();
+                    outputStream.getFD().sync();
+                }
+
+                if (!stagingFile.isFile() || stagingFile.length() == 0) throw new IllegalStateException("Selected file is empty");
+                Os.rename(stagingFile.getAbsolutePath(), dllFile.getAbsolutePath());
+                success = dllFile.isFile() && dllFile.canRead() && dllFile.length() > 0;
+            }
+            catch (Exception e) {
+                stagingFile.delete();
+                Log.w("LSFG-VK", "Failed to import Lossless.dll", e);
+            }
+
+            final boolean importSucceeded = success;
+            statusView.post(() -> {
+                updateLSFGDLLStatus(context, statusView);
+                AppUtils.showToast(context, importSucceeded ? R.string.lossless_dll_imported : R.string.lossless_dll_import_failed);
+            });
+        });
+    }
+
+    private static String getDocumentDisplayName(Context context, Uri uri) {
+        try (Cursor cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) return cursor.getString(0);
+        }
+        catch (Exception e) {}
+        return null;
+    }
+
+    private static void updateLSFGDLLStatus(Context context, TextView statusView) {
+        File dllFile = new File(context.getFilesDir(), "lsfg-vk/Lossless.dll");
+        statusView.setText(dllFile.isFile() && dllFile.canRead() && dllFile.length() > 0 ?
+            R.string.lossless_dll_selected : R.string.lossless_dll_not_selected);
     }
 
     private void installWine(final WineInfo wineInfo) {

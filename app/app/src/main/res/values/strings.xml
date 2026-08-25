@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Winlator</string>
+    <string name="app_name_lsfg">Winlator LSFG</string>
     <string name="run">Run</string>
     <string name="edit">Edit</string>
     <string name="remove">Remove</string>
@@ -267,6 +268,23 @@
     <string name="custom_device">Custom Device</string>
     <string name="reinstall_system_files">Reinstall System Files</string>
     <string name="do_you_want_to_reinstall_system_files">Do you want to reinstall system files?</string>
+    <string name="select_lossless_dll">Select Lossless.dll</string>
+    <string name="lossless_dll_not_selected">Lossless.dll not selected</string>
+    <string name="lossless_dll_selected">Lossless.dll selected</string>
+    <string name="lossless_dll_invalid">Select a readable .dll file</string>
+    <string name="lossless_dll_imported">Lossless.dll imported</string>
+    <string name="lossless_dll_import_failed">Unable to import Lossless.dll</string>
+    <string name="enable_lsfg_vk">Enable LSFG-VK</string>
+    <string name="lsfg_requires_lossless_dll">Select Lossless.dll in the general Settings before using LSFG-VK</string>
+    <string name="lsfg_vk">LSFG-VK</string>
+    <string name="lsfg_multiplier">Frame Generation</string>
+    <string name="lsfg_off">Off</string>
+    <string name="lsfg_multiplier_2x">2x</string>
+    <string name="lsfg_multiplier_3x">3x</string>
+    <string name="lsfg_multiplier_4x">4x</string>
+    <string name="lsfg_flow_scale">Flow Scale</string>
+    <string name="lsfg_performance_mode">Performance Mode</string>
+    <string name="unable_to_apply_lsfg_settings">Unable to apply LSFG-VK settings</string>
     <string name="mouse">Mouse</string>
     <string name="cursor_size">Cursor Size</string>
     <string name="color">Color</string>
@@ -348,4 +366,5 @@
     <string name="ddraw_wrapper" translatable="false">DDraw Wrapper</string>
     <string name="renderer">Renderer</string>
     <string name="default_no_override">Default (No override)</string>
+    <string name="show_gamehub_hud">Show GameHub FPS HUD</string>
 </resources>

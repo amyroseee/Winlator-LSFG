@@ -8,6 +8,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.system.Os;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,6 +40,7 @@ import com.winlator.contentdialog.AudioDriverConfigDialog;
 import com.winlator.contentdialog.ContentDialog;
 import com.winlator.contentdialog.DXVKConfigDialog;
 import com.winlator.contentdialog.DebugDialog;
+import com.winlator.contentdialog.LSFGVKConfigDialog;
 import com.winlator.contentdialog.ScreenEffectDialog;
 import com.winlator.contentdialog.TurnipConfigDialog;
 import com.winlator.contentdialog.VKD3DConfigDialog;
@@ -49,6 +52,7 @@ import com.winlator.core.EnvVars;
 import com.winlator.core.FileUtils;
 import com.winlator.core.GeneralComponents;
 import com.winlator.core.KeyValueSet;
+import com.winlator.core.LSFGDiagnostic;
 import com.winlator.core.LocaleHelper;
 import com.winlator.core.PreloaderDialog;
 import com.winlator.core.ProcessHelper;
@@ -66,15 +70,18 @@ import com.winlator.inputcontrols.ExternalController;
 import com.winlator.inputcontrols.InputControlsManager;
 import com.winlator.math.Mathf;
 import com.winlator.renderer.GLRenderer;
+import com.winlator.widget.FpsCounter;
 import com.winlator.widget.FrameRating;
 import com.winlator.widget.InputControlsView;
 import com.winlator.widget.MagnifierView;
+import com.winlator.widget.PerfHudView;
 import com.winlator.widget.TouchpadView;
 import com.winlator.widget.XServerView;
 import com.winlator.winhandler.TaskManagerDialog;
 import com.winlator.winhandler.WinHandler;
 import com.winlator.xconnector.UnixSocketConfig;
 import com.winlator.xenvironment.RootFS;
+import com.winlator.xenvironment.RootFSInstaller;
 import com.winlator.xenvironment.XEnvironment;
 import com.winlator.xenvironment.components.ALSAServerComponent;
 import com.winlator.xenvironment.components.GuestProgramLauncherComponent;
@@ -98,6 +105,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 public class XServerDisplayActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
@@ -111,6 +119,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private InputControlsManager inputControlsManager;
     private RootFS rootFS;
     private FrameRating frameRating;
+    private PerfHudView gameHubHud;
+    private final FpsCounter gameHubFpsCounter = new FpsCounter();
     private Runnable editInputControlsCallback;
     private Shortcut shortcut;
     private String[] graphicsDriver = {GraphicsDrivers.DEFAULT_VULKAN_DRIVER, GraphicsDrivers.DEFAULT_OPENGL_DRIVER};
@@ -236,7 +246,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         xServer.windowManager.addOnWindowModificationListener(new WindowManager.OnWindowModificationListener() {
             @Override
             public void onUpdateWindowContent(Window window) {
-                if (window.id == frameRatingWindowId) frameRating.update();
+                if (window.id != frameRatingWindowId) return;
+                if (frameRating != null) frameRating.update();
+                if (gameHubHud != null) {
+                    gameHubFpsCounter.tick();
+                    gameHubHud.update();
+                }
             }
 
             @Override
@@ -384,6 +399,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 break;
             case R.id.menu_item_screen_effect:
                 (new ScreenEffectDialog(this)).show();
+                drawerLayout.closeDrawers();
+                break;
+            case R.id.menu_item_lsfg_vk:
+                (new LSFGVKConfigDialog(this)).show();
                 drawerLayout.closeDrawers();
                 break;
             case R.id.menu_item_pip_mode:
@@ -550,6 +569,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.putAll(overrideEnvVars);
             overrideEnvVars = null;
         }
+        configureLSFGVK();
         environment.startEnvironmentComponents();
 
         winHandler.start();
@@ -562,7 +582,181 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         wincomponents = null;
     }
 
+    private void configureLSFGVK() {
+        // Do not let a stale/custom environment activate the implicit layer without the complete,
+        // validated configuration below.
+        envVars.remove("ENABLE_LSFG");
+        envVars.remove("LSFG_CONFIG");
+        envVars.remove("LSFG_PROCESS");
+        envVars.remove("LSFGVK_CONFIG");
+        envVars.remove("LSFGVK_PROFILE");
+        envVars.remove("DISABLE_LSFGVK");
+        envVars.remove("VK_LOADER_DEBUG");
+
+        if (container == null || !container.isLSFGEnabled()) {
+            Log.d("LSFG-VK", "Not enabled for this container");
+            return;
+        }
+
+        LSFGDiagnostic.start();
+        LSFGDiagnostic.log("Container: name="+container.getName());
+        LSFGDiagnostic.log("Graphics driver: "+String.join(",", graphicsDriver));
+        LSFGDiagnostic.log("DX wrapper: "+dxwrapper);
+        LSFGDiagnostic.log("LSFG state: enabled="+container.isLSFGEnabled()+
+            "; multiplier="+container.getLSFGMultiplier()+
+            "; flow_scale="+container.getLSFGFlowScale()+
+            "; performance_mode="+container.isLSFGPerformanceMode());
+
+        File losslessDLL = new File(getFilesDir(), "lsfg-vk/Lossless.dll");
+        LSFGDiagnostic.log("Lossless.dll: path="+losslessDLL.getAbsolutePath()+
+            "; exists="+losslessDLL.isFile()+"; readable="+losslessDLL.canRead()+
+            "; size="+losslessDLL.length());
+        if (!losslessDLL.isFile() || !losslessDLL.canRead() || losslessDLL.length() == 0) {
+            LSFGDiagnostic.log("ABORT: Lossless.dll missing, unreadable, or empty");
+            Log.w("LSFG-VK", "Lossless.dll is missing, unreadable, or empty; layer not activated");
+            AppUtils.showToast(this, R.string.lsfg_requires_lossless_dll);
+            return;
+        }
+
+        if (!RootFSInstaller.installLSFGVKLayer(this, rootFS)) {
+            LSFGDiagnostic.log("ABORT: runtime layer staging failed");
+            Log.e("LSFG-VK", "Runtime layer staging failed; layer not activated");
+            return;
+        }
+        File layerLibrary = new File(rootFS.getLibDir(), "liblsfg-vk.so");
+        File layerManifest = new File(rootFS.getRootDir(), "usr/share/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json");
+        LSFGDiagnostic.log("Layer library: path="+layerLibrary.getAbsolutePath()+
+            "; exists="+layerLibrary.isFile()+"; readable="+layerLibrary.canRead()+
+            "; size="+layerLibrary.length());
+        LSFGDiagnostic.log("Layer manifest: path="+layerManifest.getAbsolutePath()+
+            "; exists="+layerManifest.isFile()+"; readable="+layerManifest.canRead()+
+            "; size="+layerManifest.length());
+        if (!layerLibrary.isFile() || !layerLibrary.canRead() || layerLibrary.length() == 0 ||
+            !layerManifest.isFile() || !layerManifest.canRead() || layerManifest.length() == 0) {
+            Log.e("LSFG-VK", "Runtime layer library or Vulkan manifest not found; layer not activated");
+            LSFGDiagnostic.log("ABORT: layer library or manifest unavailable");
+            return;
+        }
+
+        File configFile = writeLSFGConfig(
+            container.getLSFGMultiplier(),
+            container.getLSFGFlowScale(),
+            losslessDLL,
+            container.isLSFGPerformanceMode()
+        );
+        if (configFile == null) return;
+
+        envVars.put("ENABLE_LSFG", "1");
+        envVars.remove("DISABLE_LSFG");
+        envVars.remove("DISABLE_LSFGVK");
+        envVars.put("LSFG_CONFIG", configFile.getAbsolutePath());
+        envVars.put("LSFG_PROCESS", "winlator-lsfg");
+        envVars.put("LSFGVK_CONFIG", configFile.getAbsolutePath());
+        envVars.put("LSFGVK_PROFILE", "winlator-lsfg");
+        envVars.put("VK_LOADER_DEBUG", "error,warn,layer");
+        envVars.put("DXVK_LOG_LEVEL", "debug");
+        envVars.put("DXVK_LOG_PATH", "none");
+        LSFGDiagnostic.log("Manifest content:\n"+FileUtils.readString(layerManifest));
+        LSFGDiagnostic.log("conf.toml path="+configFile.getAbsolutePath()+
+            "; exists="+configFile.isFile()+"; readable="+configFile.canRead()+
+            "; size="+configFile.length());
+        LSFGDiagnostic.log("conf.toml content:\n"+FileUtils.readString(configFile));
+        LSFGDiagnostic.log("Launch variables before GuestProgramLauncher: ENABLE_LSFG="+envVars.get("ENABLE_LSFG")+
+            "; DISABLE_LSFG="+envVars.get("DISABLE_LSFG")+
+            "; DISABLE_LSFGVK="+envVars.get("DISABLE_LSFGVK")+
+            "; LSFG_CONFIG="+envVars.get("LSFG_CONFIG")+
+            "; LSFG_PROCESS="+envVars.get("LSFG_PROCESS")+
+            "; LSFGVK_CONFIG="+envVars.get("LSFGVK_CONFIG")+
+            "; LSFGVK_PROFILE="+envVars.get("LSFGVK_PROFILE")+
+            "; VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
+            "; VK_INSTANCE_LAYERS="+envVars.get("VK_INSTANCE_LAYERS")+
+            "; LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH"));
+        Log.i("LSFG-VK", "Activation requested: layer="+layerLibrary.getAbsolutePath()+
+            " ("+layerLibrary.length()+" bytes), manifest="+layerManifest.getAbsolutePath()+
+            ", Lossless.dll="+losslessDLL.getAbsolutePath()+" ("+losslessDLL.length()+
+            " bytes), config="+configFile.getAbsolutePath());
+        Log.i("LSFG-VK", "Vulkan manifest: "+FileUtils.readString(layerManifest).replace('\n', ' '));
+        Log.i("LSFG-VK", "conf.toml: "+FileUtils.readString(configFile).replace('\n', ' '));
+    }
+
+    private File writeLSFGConfig(int multiplier, float flowScale, File losslessDLL, boolean performanceMode) {
+        File configDir = new File(rootFS.getRootDir(), RootFS.USER_CONFIG_PATH+"/lsfg-vk");
+        if (!configDir.isDirectory() && !configDir.mkdirs()) {
+            Log.e("XServerDisplayActivity", "Failed to create LSFG-VK config directory");
+            return null;
+        }
+
+        File configFile = new File(configDir, "conf.toml");
+        File stagingFile = new File(configDir, "conf.toml.staging");
+        String dllPath = losslessDLL.getAbsolutePath().replace("\\", "\\\\").replace("\"", "\\\"");
+        String toml = "# Written by Winlator (per-container LSFG-VK frame generation)\n"+
+            "version = 2\n\n"+
+            "[global]\n"+
+            "dll = \""+dllPath+"\"\n"+
+            "allow_fp16 = true\n\n"+
+            "[[profile]]\n"+
+            "name = \"winlator-lsfg\"\n"+
+            "multiplier = "+multiplier+"\n"+
+            "flow_scale = "+String.format(Locale.US, "%.2f", flowScale)+"\n"+
+            "performance_mode = "+performanceMode+"\n"+
+            "pacing = \"none\"\n";
+
+        if (!FileUtils.writeString(stagingFile, toml)) {
+            Log.e("XServerDisplayActivity", "Failed to write LSFG-VK conf.toml");
+            return null;
+        }
+        try {
+            Os.rename(stagingFile.getAbsolutePath(), configFile.getAbsolutePath());
+        }
+        catch (Exception e) {
+            stagingFile.delete();
+            Log.e("XServerDisplayActivity", "Failed to replace LSFG-VK conf.toml", e);
+            return null;
+        }
+        Log.i("LSFG-VK", "Configuration updated: multiplier="+multiplier+
+            ", flow_scale="+String.format(Locale.US, "%.2f", flowScale)+
+            ", performance_mode="+performanceMode);
+        return configFile;
+    }
+
+    public int getLSFGMultiplier() {
+        return container != null ? container.getLSFGMultiplier() : Container.LSFG_DEFAULT_MULTIPLIER;
+    }
+
+    public float getLSFGFlowScale() {
+        return container != null ? container.getLSFGFlowScale() : Container.LSFG_DEFAULT_FLOW_SCALE;
+    }
+
+    public boolean isLSFGPerformanceMode() {
+        return container != null && container.isLSFGPerformanceMode();
+    }
+
+    public boolean applyLSFGVKConfig(int multiplier, float flowScale, boolean performanceMode) {
+        File losslessDLL = new File(getFilesDir(), "lsfg-vk/Lossless.dll");
+        if (container == null || !container.isLSFGEnabled() || !losslessDLL.isFile() ||
+            !losslessDLL.canRead() || losslessDLL.length() == 0) {
+            Log.w("LSFG-VK", "Live configuration rejected because a runtime requirement is missing");
+            return false;
+        }
+
+        multiplier = multiplier >= 1 && multiplier <= 4 ? multiplier : Container.LSFG_DEFAULT_MULTIPLIER;
+        flowScale = Float.isFinite(flowScale) ? Mathf.clamp(flowScale, 0.2f, 1.0f) : Container.LSFG_DEFAULT_FLOW_SCALE;
+        if (writeLSFGConfig(multiplier, flowScale, losslessDLL, performanceMode) == null) return false;
+
+        container.setLSFGMultiplier(multiplier);
+        container.setLSFGFlowScale(flowScale);
+        container.setLSFGPerformanceMode(performanceMode);
+        container.saveData();
+        return true;
+    }
+
     private void setupUI() {
+        MenuItem lsfgMenuItem = ((NavigationView)findViewById(R.id.NavigationView)).getMenu().findItem(R.id.menu_item_lsfg_vk);
+        boolean lsfgEnabled = container != null && container.isLSFGEnabled();
+        File losslessDLL = new File(getFilesDir(), "lsfg-vk/Lossless.dll");
+        lsfgMenuItem.setVisible(lsfgEnabled);
+        lsfgMenuItem.setEnabled(lsfgEnabled && losslessDLL.isFile() && losslessDLL.canRead() && losslessDLL.length() > 0);
+
         FrameLayout rootView = findViewById(R.id.FLXServerDisplay);
         xServerView = new XServerView(this, xServer);
         final GLRenderer renderer = xServerView.getRenderer();
@@ -596,6 +790,21 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             frameRating.setMode(FrameRating.Mode.values()[container.getHUDMode()]);
             frameRating.setVisibility(View.GONE);
             rootView.addView(frameRating);
+        }
+
+        if (container != null && container.isGameHubHudEnabled()) {
+            gameHubHud = new PerfHudView(this);
+            gameHubHud.setFpsCounter(gameHubFpsCounter);
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+            int margin = Math.round(10 * getResources().getDisplayMetrics().density);
+            layoutParams.leftMargin = margin;
+            layoutParams.topMargin = margin;
+            gameHubHud.setLayoutParams(layoutParams);
+            gameHubHud.setVisibility(View.GONE);
+            rootView.addView(gameHubHud);
         }
 
         if (shortcut != null) {
@@ -1068,7 +1277,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     public void changeFrameRatingVisibility(Window window, boolean visible) {
-        if (frameRating == null) return;
+        if (frameRating == null && gameHubHud == null) return;
         if (visible) {
             if (window.id == frameRatingWindowId) return;
             Window child = window.getChildAt(0);
@@ -1083,17 +1292,29 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             }
 
             if (frameRatingWindow != null) {
-                if (frameRating.getMode() == FrameRating.Mode.FULL) {
+                if (frameRating != null && frameRating.getMode() == FrameRating.Mode.FULL) {
                     Property gpuInfo = frameRatingWindow.getProperty(Atom._NET_WM_GPU_INFO);
                     frameRating.setGPUInfo(gpuInfo != null ? new String(gpuInfo.data.array()) : "N/A");
                 }
                 frameRatingWindowId = frameRatingWindow.id;
-                frameRating.reset();
+                if (frameRating != null) frameRating.reset();
+                if (gameHubHud != null) {
+                    gameHubFpsCounter.reset();
+                    gameHubHud.reset();
+                    runOnUiThread(() -> gameHubHud.setVisibility(View.VISIBLE));
+                }
             }
         }
         else if (window.id == frameRatingWindowId) {
             frameRatingWindowId = -1;
-            runOnUiThread(() -> frameRating.setVisibility(View.GONE));
+            gameHubFpsCounter.reset();
+            runOnUiThread(() -> {
+                if (frameRating != null) frameRating.setVisibility(View.GONE);
+                if (gameHubHud != null) {
+                    gameHubHud.setVisibility(View.GONE);
+                    gameHubHud.reset();
+                }
+            });
         }
     }
 

@@ -2,7 +2,10 @@ package com.winlator.xenvironment.components;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Process;
+import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
@@ -14,6 +17,7 @@ import com.winlator.core.EnvVars;
 import com.winlator.core.FileUtils;
 import com.winlator.core.GeneralComponents;
 import com.winlator.core.LocaleHelper;
+import com.winlator.core.LSFGDiagnostic;
 import com.winlator.core.ProcessHelper;
 import com.winlator.widget.LogView;
 import com.winlator.xconnector.UnixSocketConfig;
@@ -97,22 +101,78 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         envVars.put("DISPLAY", ":0");
         envVars.put("PATH", rootDir+rootFS.getWinePath()+"/bin:"+rootDir+"/usr/local/bin:"+rootDir+"/usr/bin");
         envVars.put("LD_LIBRARY_PATH", rootFS.getLibDir().getPath());
+        envVars.put("XDG_DATA_DIRS", rootDir+"/usr/share");
+        envVars.put("VK_LAYER_PATH", rootDir+"/usr/share/vulkan/implicit_layer.d:"+
+            rootDir+"/usr/share/vulkan/explicit_layer.d");
         envVars.put("BOX64_LD_LIBRARY_PATH", rootDir+"/lib/x86_64-linux-gnu");
         envVars.put("ANDROID_SYSVSHM_SERVER", rootDir+UnixSocketConfig.SYSVSHM_SERVER_PATH);
 
         if (this.envVars != null) envVars.putAll(this.envVars);
+
+        // Container overrides are applied above, but an enabled LSFG implicit layer must always be
+        // discoverable inside this app-private RootFS. The layer and DXVK share the guest glibc ABI.
+        if (envVars.has("ENABLE_LSFG")) {
+            envVars.put("XDG_DATA_DIRS", rootDir+"/usr/share");
+            envVars.put("VK_LAYER_PATH", rootDir+"/usr/share/vulkan/implicit_layer.d:"+
+                rootDir+"/usr/share/vulkan/explicit_layer.d");
+            envVars.put("LD_LIBRARY_PATH", rootFS.getLibDir().getPath());
+        }
 
         File shmDir = new File(rootDir, "/tmp/shm");
         if (!shmDir.isDirectory()) shmDir.mkdirs();
 
         String command = rootDir+"/usr/local/bin/box64 "+guestExecutable;
 
-        return ProcessHelper.exec(command, envVars, rootDir, (status) -> {
+        if (envVars.has("ENABLE_LSFG")) {
+            Log.i("LSFG-VK", "Launching guest process: "+command);
+            Log.i("LSFG-VK", "Final guest environment: ENABLE_LSFG="+envVars.get("ENABLE_LSFG")+
+                ", DISABLE_LSFG="+envVars.get("DISABLE_LSFG")+
+                ", DISABLE_LSFGVK="+envVars.get("DISABLE_LSFGVK")+
+                ", LSFG_CONFIG="+envVars.get("LSFG_CONFIG")+
+                ", LSFG_PROCESS="+envVars.get("LSFG_PROCESS")+
+                ", LSFGVK_CONFIG="+envVars.get("LSFGVK_CONFIG")+
+                ", LSFGVK_PROFILE="+envVars.get("LSFGVK_PROFILE")+
+                ", VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
+                ", LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH")+
+                ", VK_LOADER_DEBUG="+envVars.get("VK_LOADER_DEBUG"));
+            LSFGDiagnostic.log("Guest command: "+command);
+            LSFGDiagnostic.log("Final environment: ENABLE_LSFG="+envVars.get("ENABLE_LSFG")+
+                "; DISABLE_LSFG="+envVars.get("DISABLE_LSFG")+
+                "; DISABLE_LSFGVK="+envVars.get("DISABLE_LSFGVK")+
+                "; LSFG_CONFIG="+envVars.get("LSFG_CONFIG")+
+                "; LSFG_PROCESS="+envVars.get("LSFG_PROCESS")+
+                "; LSFGVK_CONFIG="+envVars.get("LSFGVK_CONFIG")+
+                "; LSFGVK_PROFILE="+envVars.get("LSFGVK_PROFILE")+
+                "; VK_LAYER_PATH="+envVars.get("VK_LAYER_PATH")+
+                "; VK_INSTANCE_LAYERS="+envVars.get("VK_INSTANCE_LAYERS")+
+                "; XDG_DATA_DIRS="+envVars.get("XDG_DATA_DIRS")+
+                "; LD_LIBRARY_PATH="+envVars.get("LD_LIBRARY_PATH")+
+                "; VK_LOADER_DEBUG="+envVars.get("VK_LOADER_DEBUG")+
+                "; DXVK_LOG_LEVEL="+envVars.get("DXVK_LOG_LEVEL")+
+                "; DXVK_LOG_PATH="+envVars.get("DXVK_LOG_PATH"));
+        }
+
+        final boolean lsfgDiagnostic = envVars.has("ENABLE_LSFG");
+        final Callback<String> diagnosticCallback = LSFGDiagnostic::process;
+        if (lsfgDiagnostic) ProcessHelper.addDebugCallback(diagnosticCallback);
+        int launchedPid = ProcessHelper.exec(command, envVars, rootDir, (status) -> {
+            if (lsfgDiagnostic) {
+                // Let the stdout/stderr reader threads drain their final Vulkan/DXVK lines first.
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    ProcessHelper.removeDebugCallback(diagnosticCallback);
+                    LSFGDiagnostic.finish(status);
+                }, 1500);
+            }
             synchronized (lock) {
                 pid = -1;
             }
             if (terminationCallback != null) terminationCallback.call(status);
         });
+        if (launchedPid == -1 && lsfgDiagnostic) {
+            ProcessHelper.removeDebugCallback(diagnosticCallback);
+            LSFGDiagnostic.finish(-1);
+        }
+        return launchedPid;
     }
 
     private void extractBox64File() {

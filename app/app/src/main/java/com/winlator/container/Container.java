@@ -227,6 +227,63 @@ public class Container {
         catch (JSONException e) {}
     }
 
+    // LSFG-VK runtime configuration, stored independently in each container's extraData.
+    // Multiplier 1 is the layer's passthrough state.
+    public static final int LSFG_DEFAULT_MULTIPLIER = 1;
+    public static final float LSFG_DEFAULT_FLOW_SCALE = 0.80f;
+
+    public boolean isLSFGEnabled() {
+        return getExtra("lsfgEnabled", "0").equals("1");
+    }
+
+    public void setLSFGEnabled(boolean enabled) {
+        putExtra("lsfgEnabled", enabled ? "1" : "0");
+    }
+
+    public int getLSFGMultiplier() {
+        try {
+            int multiplier = Integer.parseInt(getExtra("lsfgMultiplier", String.valueOf(LSFG_DEFAULT_MULTIPLIER)));
+            return multiplier >= 1 && multiplier <= 4 ? multiplier : LSFG_DEFAULT_MULTIPLIER;
+        }
+        catch (NumberFormatException e) {
+            return LSFG_DEFAULT_MULTIPLIER;
+        }
+    }
+
+    public void setLSFGMultiplier(int multiplier) {
+        putExtra("lsfgMultiplier", String.valueOf(multiplier >= 1 && multiplier <= 4 ? multiplier : LSFG_DEFAULT_MULTIPLIER));
+    }
+
+    public float getLSFGFlowScale() {
+        try {
+            float flowScale = Float.parseFloat(getExtra("lsfgFlowScale", String.valueOf(LSFG_DEFAULT_FLOW_SCALE)));
+            return Float.isFinite(flowScale) && flowScale >= 0.2f && flowScale <= 1.0f ? flowScale : LSFG_DEFAULT_FLOW_SCALE;
+        }
+        catch (NumberFormatException e) {
+            return LSFG_DEFAULT_FLOW_SCALE;
+        }
+    }
+
+    public void setLSFGFlowScale(float flowScale) {
+        putExtra("lsfgFlowScale", String.valueOf(Float.isFinite(flowScale) && flowScale >= 0.2f && flowScale <= 1.0f ? flowScale : LSFG_DEFAULT_FLOW_SCALE));
+    }
+
+    public boolean isLSFGPerformanceMode() {
+        return getExtra("lsfgPerformanceMode", "1").equals("1");
+    }
+
+    public void setLSFGPerformanceMode(boolean performanceMode) {
+        putExtra("lsfgPerformanceMode", performanceMode ? "1" : "0");
+    }
+
+    public boolean isGameHubHudEnabled() {
+        return getExtra("gameHubHudEnabled", "0").equals("1");
+    }
+
+    public void setGameHubHudEnabled(boolean enabled) {
+        putExtra("gameHubHudEnabled", enabled ? "1" : "0");
+    }
+
     public String getWineVersion() {
         return wineVersion;
     }
