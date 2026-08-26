@@ -120,7 +120,9 @@ public class FrameRating extends FrameLayout implements Runnable {
     @Override
     public void run() {
         if (getVisibility() == GONE) setVisibility(View.VISIBLE);
-        ((TextView)fpsPanel.getChildAt(1)).setText(String.format(Locale.ENGLISH, "%.1f", lastFPS));
+        TextView fpsValue = (TextView)fpsPanel.getChildAt(1);
+        fpsValue.setText(String.format(Locale.ENGLISH, "%.1f", lastFPS));
+        fpsValue.setTextColor(lastFPS < 30.0f ? 0xffef5350 : lastFPS < 50.0f ? 0xffffb74d : 0xff66bb6a);
 
         if (mode == Mode.FULL && ++tick >= 2) {
             tick = 0;
@@ -139,4 +141,5 @@ public class FrameRating extends FrameLayout implements Runnable {
             ((TextView)cpuPanel.getChildAt(1)).setText(CPUStatus.formatClockSpeed(maxClockSpeed)+" | "+cpuInfo);
         }
     }
+
 }

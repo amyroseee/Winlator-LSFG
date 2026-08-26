@@ -1,0 +1,23 @@
+# Local Android SDK/NDK and Gradle caches
+/.android-sdk/
+/.gradle-build-cache/
+
+# Local IDE and build state
+**/.gradle/
+**/.cxx/
+**/build/
+local.properties
+
+# Generated packages and temporary runtime files
+*.apk
+*.aab
+*.apks
+*.log
+**/__pycache__/
+*.py[cod]
+
+# Private/local LSFG analysis inputs and extracted shader dumps
+**/Lossless.dll
+**/*.spv
+**/*.spvasm
+**/*reflection*.json

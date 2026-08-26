@@ -13,6 +13,7 @@ import com.winlator.core.Bitmask;
 import com.winlator.xserver.Drawable;
 import com.winlator.xserver.Pixmap;
 import com.winlator.xserver.Window;
+import com.winlator.xserver.WindowManager;
 import com.winlator.xserver.XClient;
 import com.winlator.xserver.XLock;
 import com.winlator.xserver.XServer;
@@ -24,6 +25,12 @@ import com.winlator.xserver.events.PresentCompleteNotify;
 import com.winlator.xserver.events.PresentIdleNotify;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PresentExtension extends Extension {
     public static final byte MAJOR_VERSION = 1;
@@ -34,6 +41,47 @@ public class PresentExtension extends Extension {
     public enum Mode {COPY, FLIP, SKIP}
     private final SparseArray<Event> events = new SparseArray<>();
     private SyncExtension syncExtension;
+    private static final long FIRE_EARLY_NS = 700_000L;
+    private volatile int frameRateLimit;
+    private final AtomicLong limiterGeneration = new AtomicLong();
+    private final ConcurrentHashMap<Integer, WindowTiming> windowTimings = new ConcurrentHashMap<>();
+    private final DelayQueue<PendingIdle> pendingIdles = new DelayQueue<>();
+    private volatile Thread pacerThread;
+    private volatile boolean closed;
+    private final WindowManager.OnWindowModificationListener windowListener;
+
+    private static class WindowTiming {
+        long nextIdleNs;
+    }
+
+    private static class PendingIdle implements Delayed {
+        final Window window;
+        final Pixmap pixmap;
+        final int serial;
+        final int idleFence;
+        final long targetNs;
+        final long generation;
+        final AtomicBoolean delivered = new AtomicBoolean();
+
+        PendingIdle(Window window, Pixmap pixmap, int serial, int idleFence, long targetNs, long generation) {
+            this.window = window;
+            this.pixmap = pixmap;
+            this.serial = serial;
+            this.idleFence = idleFence;
+            this.targetNs = targetNs;
+            this.generation = generation;
+        }
+
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return unit.convert(targetNs - System.nanoTime(), TimeUnit.NANOSECONDS);
+        }
+
+        @Override
+        public int compareTo(Delayed other) {
+            return Long.compare(targetNs, ((PendingIdle)other).targetNs);
+        }
+    }
 
     private static abstract class ClientOpcodes {
         private static final byte QUERY_VERSION = 0;
@@ -50,6 +98,13 @@ public class PresentExtension extends Extension {
 
     public PresentExtension(XServer xServer, byte majorOpcode) {
         super(xServer, majorOpcode);
+        windowListener = new WindowManager.OnWindowModificationListener() {
+            @Override
+            public void onUnmapWindow(Window window) {
+                windowTimings.remove(window.id);
+            }
+        };
+        xServer.windowManager.addOnWindowModificationListener(windowListener);
     }
 
     @Override
@@ -59,7 +114,6 @@ public class PresentExtension extends Extension {
 
     private void sendIdleNotify(Window window, Pixmap pixmap, int serial, int idleFence) {
         if (idleFence != 0) syncExtension.setTriggered(idleFence);
-        if (events.size() == 0) return;
 
         synchronized (events) {
             for (int i = 0; i < events.size(); i++) {
@@ -71,9 +125,92 @@ public class PresentExtension extends Extension {
         }
     }
 
-    private void sendCompleteNotify(Window window, int serial, Kind kind, Mode mode, long ust, long msc) {
-        if (events.size() == 0) return;
+    /**
+     * Changes Present backpressure immediately. Zero disables pacing; positive values are kept in
+     * the user-facing 10-200 FPS range. Changing the target releases already queued buffers so the
+     * next Present starts a fresh cadence instead of inheriting an interval from the old target.
+     */
+    public void setFrameRateLimit(int limit) {
+        int normalized = limit <= 0 ? 0 : Math.max(10, Math.min(200, limit));
+        if (frameRateLimit == normalized) return;
+        frameRateLimit = normalized;
+        limiterGeneration.incrementAndGet();
+        windowTimings.clear();
+        flushPendingIdles();
+    }
 
+    public int getFrameRateLimit() {
+        return frameRateLimit;
+    }
+
+    private void emitIdleNotify(Window window, Pixmap pixmap, int serial, int idleFence) {
+        int targetFps = frameRateLimit;
+        if (targetFps == 0 || closed) {
+            sendIdleNotify(window, pixmap, serial, idleFence);
+            return;
+        }
+
+        long generation = limiterGeneration.get();
+        long frameNs = 1_000_000_000L / targetFps;
+        long now = System.nanoTime();
+        WindowTiming timing = windowTimings.computeIfAbsent(window.id, ignored -> new WindowTiming());
+        long targetNs;
+        synchronized (timing) {
+            if (timing.nextIdleNs <= now - frameNs) timing.nextIdleNs = now + frameNs;
+            else timing.nextIdleNs += frameNs;
+            targetNs = Math.max(now, timing.nextIdleNs - FIRE_EARLY_NS);
+        }
+
+        PendingIdle pending = new PendingIdle(window, pixmap, serial, idleFence, targetNs, generation);
+        if (generation != limiterGeneration.get() || frameRateLimit == 0) {
+            deliverIdle(pending);
+            return;
+        }
+        ensurePacerThread();
+        pendingIdles.offer(pending);
+    }
+
+    private synchronized void ensurePacerThread() {
+        if (closed || pacerThread != null) return;
+        pacerThread = new Thread(() -> {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    PendingIdle pending = pendingIdles.take();
+                    deliverIdle(pending);
+                }
+            }
+            catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        }, "PresentIdlePacer");
+        pacerThread.setDaemon(true);
+        pacerThread.start();
+    }
+
+    private void deliverIdle(PendingIdle pending) {
+        if (pending.delivered.compareAndSet(false, true))
+            sendIdleNotify(pending.window, pending.pixmap, pending.serial, pending.idleFence);
+    }
+
+    private void flushPendingIdles() {
+        for (PendingIdle pending : pendingIdles) {
+            if (pendingIdles.remove(pending)) deliverIdle(pending);
+        }
+    }
+
+    public synchronized void close() {
+        if (closed) return;
+        closed = true;
+        limiterGeneration.incrementAndGet();
+        Thread thread = pacerThread;
+        pacerThread = null;
+        if (thread != null) thread.interrupt();
+        pendingIdles.clear();
+        windowTimings.clear();
+        xServer.windowManager.removeOnWindowModificationListener(windowListener);
+    }
+
+    private void sendCompleteNotify(Window window, int serial, Kind kind, Mode mode, long ust, long msc) {
         if (ust == 0 && msc == 0) {
             ust = System.nanoTime() / 1000;
             msc = ust / FAKE_INTERVAL;
@@ -125,7 +262,7 @@ public class PresentExtension extends Extension {
         synchronized (content.renderLock) {
             if (pixmap != null) {
                 content.copyArea((short)0, (short)0, xOff, yOff, pixmap.drawable.width, pixmap.drawable.height, pixmap.drawable);
-                sendIdleNotify(window, pixmap, serial, idleFence);
+                emitIdleNotify(window, pixmap, serial, idleFence);
             }
             else content.forceUpdate();
             sendCompleteNotify(window, serial, Kind.PIXMAP, Mode.COPY, 0, 0);

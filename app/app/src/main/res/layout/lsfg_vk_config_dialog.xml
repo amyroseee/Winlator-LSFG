@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="360dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/lsfg_multiplier" />
+
+    <Spinner
+        style="@style/ComboBox"
+        android:id="@+id/SLSFGMultiplier"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/lsfg_preset" />
+
+    <Spinner
+        style="@style/ComboBox"
+        android:id="@+id/SLSFGPreset"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/lsfg_flow_scale" />
+
+    <com.winlator.widget.SeekBar
+        android:id="@+id/SBLSFGFlowScale"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:minValue="0.20"
+        app:maxValue="1.00"
+        app:step="0.01" />
+
+</LinearLayout>

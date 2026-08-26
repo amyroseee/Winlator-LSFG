@@ -485,6 +485,24 @@
                             android:layout_gravity="center_horizontal"
                             android:text="@string/reinstall_system_files" />
                     </LinearLayout>
+
+                    <View style="@style/FieldSeparator" />
+
+                    <Button
+                        style="@style/ButtonNeutral"
+                        android:id="@+id/BTSelectLosslessDLL"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:text="@string/select_lossless_dll" />
+
+                    <TextView
+                        android:id="@+id/TVLSFGDLLStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/lossless_dll_not_selected" />
                 </LinearLayout>
 
                 <TextView

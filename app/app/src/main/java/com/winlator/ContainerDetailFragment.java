@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -146,6 +147,15 @@ public class ContainerDetailFragment extends Fragment {
 
         view.findViewById(R.id.BTHelpDXWrapper).setOnClickListener((v) -> AppUtils.showHelpBox(context, v, R.string.dxwrapper_help_content));
 
+        final CheckBox cbEnableLSFGVK = view.findViewById(R.id.CBEnableLSFGVK);
+        cbEnableLSFGVK.setChecked(isEditMode() && container.isLSFGEnabled());
+        cbEnableLSFGVK.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            File losslessDLL = new File(context.getFilesDir(), "lsfg-vk/Lossless.dll");
+            if (isChecked && (!losslessDLL.isFile() || !losslessDLL.canRead() || losslessDLL.length() == 0)) {
+                AppUtils.showToast(context, R.string.lsfg_requires_lossless_dll);
+            }
+        });
+
         Spinner sAudioDriver = view.findViewById(R.id.SAudioDriver);
         AppUtils.setSpinnerSelectionFromIdentifier(sAudioDriver, isEditMode() ? container.getAudioDriver() : Container.DEFAULT_AUDIO_DRIVER);
 
@@ -219,6 +229,7 @@ public class ContainerDetailFragment extends Fragment {
                     container.setStartupSelection(startupSelection);
                     container.setBox64Preset(box64Preset);
                     container.setDesktopTheme(desktopTheme);
+                    container.setLSFGEnabled(cbEnableLSFGVK.isChecked());
                     container.saveData();
 
                     saveWineRegistryKeys(view);
@@ -256,6 +267,8 @@ public class ContainerDetailFragment extends Fragment {
                     manager.createContainerAsync(data, (container) -> {
                         if (container != null) {
                             this.container = container;
+                            container.setLSFGEnabled(cbEnableLSFGVK.isChecked());
+                            container.saveData();
                             saveWineRegistryKeys(view);
                         }
                         preloaderDialog.close();

@@ -2,44 +2,61 @@
 	<img src="logo.png" width="376" height="128" alt="Winlator Logo" />
 </p>
 
-# Winlator
+# Winlator LSFG
 
-Winlator is an Android application that lets you to run Windows (x86_64) applications with Wine and Box86/Box64.
+A Winlator fork focused on bringing LSFG-VK frame generation to Android, with a few extra quality-of-life features.
 
-# Installation
+## What's included
 
-1. Download and install the APK (Winlator_11.1.apk) from [GitHub Releases](https://github.com/brunodev85/winlator/releases)
-2. Launch the app and wait for the installation process to finish
+- **LSFG-VK integration**
+  - Adapted to work with the Winlator glibc environment
+  - Uses a user-provided `Lossless.dll`
+  - The DLL is not bundled with the app
 
-----
+- **Frame Generation**
+  - 2x
+  - 3x
+  - 4x
+  - The current Winlator integration is still experimental and may improve in future releases
 
-[![Play on Youtube](https://img.youtube.com/vi/ETYDgKz4jBQ/3.jpg)](https://www.youtube.com/watch?v=ETYDgKz4jBQ)
-[![Play on Youtube](https://img.youtube.com/vi/9E4wnKf2OsI/2.jpg)](https://www.youtube.com/watch?v=9E4wnKf2OsI)
-[![Play on Youtube](https://img.youtube.com/vi/czEn4uT3Ja8/2.jpg)](https://www.youtube.com/watch?v=czEn4uT3Ja8)
-[![Play on Youtube](https://img.youtube.com/vi/eD36nxfT_Z0/2.jpg)](https://www.youtube.com/watch?v=eD36nxfT_Z0)
-[![Play on Youtube](https://img.youtube.com/vi/GHBKmzGmhoo/1.jpg)](https://www.youtube.com/watch?v=GHBKmzGmhoo)
+- **LSFG presets**
+  - Performance
+  - Balanced
+  - Quality
+  - Custom
 
-----
+- **Per-container LSFG settings**
+  - Frame generation can be configured separately for each container
 
-# Useful Tips
+- **High Contrast FPS Counter**
+  - Simple performance overlay designed for better readability during gameplay
 
-- If you are experiencing performance issues, try changing the Box64 preset to `Performance` in Container Settings -> Advanced Tab.
-- For applications that use .NET Framework, try installing `Wine Mono` found in Start Menu -> System Tools -> Installers.
-- If some older games don't open, try adding the environment variable `MESA_EXTENSION_MAX_YEAR=2003` in Container Settings -> Environment Variables.
-- Try running the games using the shortcut on the Winlator home screen, there you can define individual settings for each game.
-- To display low resolution games correctly, try to enabling the `Force Fullscreen` option in the shortcut settings.
-- To improve stability in games that uses Unity Engine, try changing the Box64 preset to `Stability` or in the shortcut settings add the exec argument `-force-gfx-direct`.
-- If you are experiencing audio crackling, try increasing the average latency in ALSA/PulseAudio configuration. Old games like Unreal Gold resolve audio issues by increasing this value to 90ms.
+- **Save Backup & Restore**
+  - Backup and restore game saves directly from the container menu
+  - Supports common Wine save locations
 
-# Credits and Third-party apps
+- **Visual changes**
+  - Cyan app theme
+  - Updated launcher and internal visuals
 
-- GLIBC Patches by [Termux Pacman](https://github.com/termux-pacman/glibc-packages)
-- Wine ([winehq.org](https://www.winehq.org/))
-- Box86/Box64 by [ptitseb](https://github.com/ptitSeb)
-- Mesa (Turnip/Zink/VirGL) ([mesa3d.org](https://www.mesa3d.org))
-- DXVK ([github.com/doitsujin/dxvk](https://github.com/doitsujin/dxvk))
-- VKD3D ([gitlab.winehq.org/wine/vkd3d](https://gitlab.winehq.org/wine/vkd3d))
-- CNC DDraw ([github.com/FunkyFr3sh/cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw))
+## Lossless.dll
 
-Special thanks to all the developers involved in these projects.<br>
-Thank you to all the people who believe in this project.
+LSFG requires a compatible `Lossless.dll` provided by the user.
+
+This project does not include or distribute `Lossless.dll`.
+
+## Current Version
+
+**v1.0-preview.1**
+
+This is the first public preview. Compatibility may vary depending on the game, device and GPU driver.
+
+## Credits
+
+Based on Winlator by **brunodev85**.
+
+LSFG-VK and other third-party components belong to their respective authors.
+
+## Disclaimer
+
+This is an unofficial Winlator fork and is not affiliated with the original Winlator project or Lossless Scaling.

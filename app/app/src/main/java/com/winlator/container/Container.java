@@ -227,6 +227,87 @@ public class Container {
         catch (JSONException e) {}
     }
 
+    // LSFG-VK runtime configuration, stored independently in each container's extraData.
+    // Multiplier 1 is the layer's passthrough state.
+    public static final int LSFG_DEFAULT_MULTIPLIER = 1;
+    public static final float LSFG_DEFAULT_FLOW_SCALE = 0.80f;
+    public static final String LSFG_PRESET_PERFORMANCE = "performance";
+    public static final String LSFG_PRESET_BALANCED = "balanced";
+    public static final String LSFG_PRESET_QUALITY = "quality";
+    public static final String LSFG_PRESET_CUSTOM = "custom";
+    public static final float LSFG_PRESET_PERFORMANCE_FLOW_SCALE = 0.20f;
+    public static final float LSFG_PRESET_BALANCED_FLOW_SCALE = 0.40f;
+    public static final float LSFG_PRESET_QUALITY_FLOW_SCALE = 0.65f;
+
+    public boolean isLSFGEnabled() {
+        return getExtra("lsfgEnabled", "0").equals("1");
+    }
+
+    public void setLSFGEnabled(boolean enabled) {
+        putExtra("lsfgEnabled", enabled ? "1" : "0");
+    }
+
+    public int getLSFGMultiplier() {
+        try {
+            int multiplier = Integer.parseInt(getExtra("lsfgMultiplier", String.valueOf(LSFG_DEFAULT_MULTIPLIER)));
+            return multiplier >= 1 && multiplier <= 4 ? multiplier : LSFG_DEFAULT_MULTIPLIER;
+        }
+        catch (NumberFormatException e) {
+            return LSFG_DEFAULT_MULTIPLIER;
+        }
+    }
+
+    public void setLSFGMultiplier(int multiplier) {
+        putExtra("lsfgMultiplier", String.valueOf(multiplier >= 1 && multiplier <= 4 ? multiplier : LSFG_DEFAULT_MULTIPLIER));
+    }
+
+    public float getLSFGFlowScale() {
+        try {
+            float flowScale = Float.parseFloat(getExtra("lsfgFlowScale", String.valueOf(LSFG_DEFAULT_FLOW_SCALE)));
+            return Float.isFinite(flowScale) && flowScale >= 0.2f && flowScale <= 1.0f ? flowScale : LSFG_DEFAULT_FLOW_SCALE;
+        }
+        catch (NumberFormatException e) {
+            return LSFG_DEFAULT_FLOW_SCALE;
+        }
+    }
+
+    public void setLSFGFlowScale(float flowScale) {
+        putExtra("lsfgFlowScale", String.valueOf(Float.isFinite(flowScale) && flowScale >= 0.2f && flowScale <= 1.0f ? flowScale : LSFG_DEFAULT_FLOW_SCALE));
+    }
+
+    public String getLSFGPreset() {
+        String preset = getExtra("lsfgPreset", LSFG_PRESET_CUSTOM);
+        return isLSFGPresetConsistent(preset, getLSFGFlowScale()) ? preset : LSFG_PRESET_CUSTOM;
+    }
+
+    public void setLSFGPreset(String preset, float flowScale) {
+        putExtra("lsfgPreset", isLSFGPresetConsistent(preset, flowScale) ? preset : LSFG_PRESET_CUSTOM);
+    }
+
+    private static boolean isLSFGPresetConsistent(String preset, float flowScale) {
+        float expected;
+        if (LSFG_PRESET_PERFORMANCE.equals(preset)) expected = LSFG_PRESET_PERFORMANCE_FLOW_SCALE;
+        else if (LSFG_PRESET_BALANCED.equals(preset)) expected = LSFG_PRESET_BALANCED_FLOW_SCALE;
+        else if (LSFG_PRESET_QUALITY.equals(preset)) expected = LSFG_PRESET_QUALITY_FLOW_SCALE;
+        else return LSFG_PRESET_CUSTOM.equals(preset);
+        return Float.isFinite(flowScale) && Math.abs(flowScale - expected) < 0.0001f;
+    }
+
+    public boolean isLSFGPerformanceMode() {
+        return getExtra("lsfgPerformanceMode", "1").equals("1");
+    }
+
+    public void setLSFGPerformanceMode(boolean performanceMode) {
+        putExtra("lsfgPerformanceMode", performanceMode ? "1" : "0");
+    }
+
+    /** Migrates the removed, unstable OFF option without deleting the backend quality path. */
+    public boolean normalizeLSFGPerformanceMode() {
+        if (isLSFGPerformanceMode()) return false;
+        setLSFGPerformanceMode(true);
+        return true;
+    }
+
     public String getWineVersion() {
         return wineVersion;
     }
@@ -387,6 +468,13 @@ public class Container {
                     break;
             }
         }
+        boolean retiredOptionsRemoved = extraData != null &&
+            (extraData.has("fpsLimit") || extraData.has("gameHubHudEnabled"));
+        if (extraData != null) {
+            extraData.remove("fpsLimit");
+            extraData.remove("gameHubHudEnabled");
+        }
+        if (retiredOptionsRemoved && getConfigFile().isFile()) saveData();
     }
 
     public static void checkObsoleteOrMissingProperties(JSONObject data) {
