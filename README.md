@@ -51,6 +51,13 @@ This project does not include or distribute `Lossless.dll`.
 
 This is the first public preview. Compatibility may vary depending on the game, device and GPU driver.
 
+
+<img width="1600" height="720" alt="1000016109" src="https://github.com/user-attachments/assets/1d243d94-510a-4554-91c5-a81b5e82497b" />
+<img width="1600" height="720" alt="1000016107" src="https://github.com/user-attachments/assets/af0fc1da-5216-42ca-b2d5-5de50119c2b5" />
+<img width="1600" height="720" alt="1000016110" src="https://github.com/user-attachments/assets/fdb83480-d537-4713-ad3f-8a6d0315cfa2" />
+
+
+
 ## Credits
 
 Based on Winlator by **brunodev85**.
