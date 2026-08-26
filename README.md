@@ -55,7 +55,7 @@ This project does not include or distribute `Lossless.dll`.
 
 Based on Winlator by **brunodev85**.
 
-LSFG-VK and other third-party components belong to their respective authors.
+LSFG-VK and other third-party components belong to their respective authors
 
 ## Disclaimer
 
