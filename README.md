@@ -1,23 +1,23 @@
 <p align="center">
-	<img src="logo.png" width="376" height="128" alt="Winlator Logo" />
+	<img src="logo.png" width="376" height="128" alt="Winlator LSFG Logo" />
 </p>
 
 # Winlator LSFG
 
-A Winlator fork focused on bringing LSFG-VK frame generation to Android, with a few extra quality-of-life features.
+A Winlator fork focused on integrating LSFG-VK frame generation into Android, along with a few practical additions for everyday use.
 
-## What's included
+## Features
 
 - **LSFG-VK integration**
-  - Adapted to work with the Winlator glibc environment
+  - Adapted for the Winlator glibc environment
   - Uses a user-provided `Lossless.dll`
-  - The DLL is not bundled with the app
+  - `Lossless.dll` is not bundled with the app
 
 - **Frame Generation**
   - 2x
   - 3x
   - 4x
-  - The current Winlator integration is still experimental and may improve in future releases
+  - The current Winlator integration is still experimental and may improve over time
 
 - **LSFG presets**
   - Performance
@@ -26,10 +26,10 @@ A Winlator fork focused on bringing LSFG-VK frame generation to Android, with a 
   - Custom
 
 - **Per-container LSFG settings**
-  - Frame generation can be configured separately for each container
+  - LSFG can be configured separately for each container
 
 - **High Contrast FPS Counter**
-  - Simple performance overlay designed for better readability during gameplay
+  - Simple performance overlay focused on readability during gameplay
 
 - **Save Backup & Restore**
   - Backup and restore game saves directly from the container menu
@@ -45,18 +45,11 @@ LSFG requires a compatible `Lossless.dll` provided by the user.
 
 This project does not include or distribute `Lossless.dll`.
 
-## Current Version
+## Screenshots
 
-**v1.0-preview.1**
-
-This is the first public preview. Compatibility may vary depending on the game, device and GPU driver.
-
-
-<img width="1600" height="720" alt="1000016109" src="https://github.com/user-attachments/assets/1d243d94-510a-4554-91c5-a81b5e82497b" />
-<img width="1600" height="720" alt="1000016107" src="https://github.com/user-attachments/assets/af0fc1da-5216-42ca-b2d5-5de50119c2b5" />
-<img width="1600" height="720" alt="1000016110" src="https://github.com/user-attachments/assets/fdb83480-d537-4713-ad3f-8a6d0315cfa2" />
-
-
+<img width="1600" height="720" alt="Winlator LSFG gameplay" src="https://github.com/user-attachments/assets/1d243d94-510a-4554-91c5-a81b5e82497b" />
+<img width="1600" height="720" alt="Winlator LSFG FPS counter" src="https://github.com/user-attachments/assets/af0fc1da-5216-42ca-b2d5-5de50119c2b5" />
+<img width="1600" height="720" alt="Winlator LSFG settings" src="https://github.com/user-attachments/assets/fdb83480-d537-4713-ad3f-8a6d0315cfa2" />
 
 ## Credits
 
