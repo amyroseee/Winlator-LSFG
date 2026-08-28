@@ -2193,7 +2193,7 @@ void vt_handle_vkGetPhysicalDeviceSparseImageFormatProperties2(VkContext* contex
 
     VkSparseImageFormatProperties2* properties = propertyCount > 0 ? calloc(propertyCount, sizeof(VkSparseImageFormatProperties2)) : NULL;
     if (properties) vt_unserialize_vkGetPhysicalDeviceSparseImageFormatProperties2(VK_NULL_HANDLE, NULL, NULL, properties, context->inputBuffer, &context->memoryPool);
-    
+
     vulkanWrapper.vkGetPhysicalDeviceSparseImageFormatProperties2(physicalDevice, &formatInfo, &propertyCount, properties);
 
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceSparseImageFormatProperties2, VK_NULL_HANDLE, NULL, &propertyCount, properties);

@@ -2721,7 +2721,7 @@ static bool is_integer_memory(struct dump_ctx *ctx, enum tgsi_file_type file_typ
    case TGSI_FILE_MEMORY:
       return ctx->integer_memory;
    default:
-      return false;   
+      return false;
    }
 }
 
@@ -6184,7 +6184,7 @@ static boolean fill_fragment_interpolants(struct dump_ctx *ctx, struct vrend_sha
 
       if (index >= ctx->num_interps)
          return true;
-	 
+
       sinfo->interpinfo[index].semantic_name = ctx->inputs[i].name;
       sinfo->interpinfo[index].semantic_index = ctx->inputs[i].sid;
       sinfo->interpinfo[index].interpolate = ctx->inputs[i].interpolate;
@@ -6398,7 +6398,7 @@ bool vrend_convert_shader(struct vrend_context *rctx,
    ctx.generic_outputs_expected_mask = key->generic_outputs_expected_mask;
 
    tgsi_scan_shader(tokens, &ctx.info);
-   
+
    if (cfg->glsl_version >= 140)
       require_glsl_ver(&ctx, 140);
 

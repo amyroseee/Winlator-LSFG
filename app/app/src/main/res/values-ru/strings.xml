@@ -150,6 +150,7 @@
     <string name="conservative">Консервативный</string>
     <string name="intermediate">Средний</string>
     <string name="performance">производительность</string>
+    <string name="unity_preset">Пресет Unity</string>
     <string name="preset">Предустановка</string>
     <string name="you_cannot_remove_this_preset">Вы не можете удалить эту предустановку</string>
     <string name="you_cannot_remove_this_component_version">Вы не можете удалить эту версию компонента</string>
@@ -311,4 +312,46 @@
     <string name="restoring_save_data">Восстановление данных сохранений</string>
     <string name="restore_completed">Восстановление завершено</string>
     <string name="restore_failed">Не удалось восстановить сохранения</string>
+    <string name="box64_env_var_help__dynarec_aligned_atomics"><![CDATA[Генерирует только выровненные атомарные операции на Arm64. <b>1</b> дает меньший и быстрый код, но может вызвать SIGBUS для невыровненных LOCK-операций; <b>0</b> обрабатывает невыровненные операции.]]></string>
+    <string name="box64_env_var_help__dynarec_df">Включает отложенные флаги. Отключение может уменьшить оптимизацию и повлиять на совместимость.</string>
+    <string name="box64_env_var_help__dynarec_dirty"><![CDATA[Разрешает продолжать потенциально измененный блок. <b>1</b> может ускорить загрузку, но вызвать неожиданные сбои; <b>2</b> также не защищает обнаруженные hot-страницы от записи и может пропустить некоторые изменения самомодифицируемого кода.]]></string>
+    <string name="box64_env_var_help__dynarec_pause">Выбирает эмуляцию PAUSE x86: <b>0</b> игнорирует, <b>1</b> использует YIELD, <b>2</b> — WFI, <b>3</b> — SEVL+WFE. Режим может повлиять на spinlock и совместимость.</string>
+    <string name="box64_env_var_help__dynarec_div0">Управляет генерацией исключения деления на ноль. Включите, если программа зависит от исключения x86; иначе поведение может отличаться.</string>
+    <string name="box64_env_var_help__dynarec_tbb">Управляет обнаружением libtbb. При включении Box64 обнаруживает libtbb и применяет консервативные настройки; это не режим производительности.</string>
+    <string name="box64_env_var_help__dynarec_sep">Добавляет вторичные точки входа для оптимизации CALL/RET при включенном CALLRET: <b>1</b> для известных бинарных файлов, <b>2</b> для всей памяти. Может повлиять на совместимость.</string>
+    <string name="box64_env_var_help__dynarec_nohotpage">Управляет обнаружением hot-страниц, где код выполняется одновременно с записью данных. Отключение может пропустить изменения самомодифицируемого кода и вызвать сбои.</string>
+    <string name="box64_env_var_help__dynarec_volatile_metadata">Использует volatile-метаданные PE-файлов для эмуляции строгой модели памяти. Только для 64-битных игр Windows; отключение убирает эту информацию.</string>
+    <string name="box64_env_var_help__unityplayer">Обнаруживает UnityPlayer и применяет консервативные настройки, включая BOX64_UNITY=1. Это не гарантирует больший FPS.</string>
+    <string name="box64_env_var_help__unity">Помечает игру как Unity: использует специальное обнаружение в Windows и применяет BOX64_DYNAREC_STRONGMEM=1 в Linux. Меняет совместимость, но не гарантирует прирост FPS.</string>
+    <string name="restore_previous_configuration">Восстановить предыдущую конфигурацию</string>
+    <string name="save_working_configuration">Сохранить рабочую конфигурацию</string>
+    <string name="apply_working_configuration">Применить рабочую конфигурацию</string>
+    <string name="confirm_restore_configuration">Восстановить предыдущую конфигурацию?</string>
+    <string name="confirm_apply_working_configuration">Применить рабочую конфигурацию?</string>
+    <string name="recovery">ВОССТАНОВЛЕНИЕ</string>
+    <string name="online_game_configs">Онлайн-конфигурации игр</string><string name="game">Игра</string><string name="compatible_match">Совместимо</string><string name="information_only">только информация</string><string name="installed">Установлено</string><string name="missing">Отсутствует</string>
+    <string name="select_shortcut">Выберите ярлык</string>
+    <string name="configuration_applied">Конфигурация применена</string>
+    <string name="no_online_configs">Онлайн-конфигурации не найдены</string>
+    <string name="online_configs_found">Онлайн-конфигурации</string>
+    <string name="search">Поиск</string>
+    <string name="missing_component">Отсутствующий компонент</string>
+    <string name="config_requires_component">Для этой конфигурации требуется %1$s</string>
+    <string name="component_not_available">Необходимый компонент недоступен</string>
+    <string name="download">Скачать</string>
+    <string name="apply">Применить</string>
+    <string name="preview">Предпросмотр</string>
+    <string name="refresh">Обновить</string>
+    <string name="publish_config">Опубликовать конфигурацию</string>
+    <string name="publishing">Публикация...</string>
+    <string name="published_successfully">Успешно опубликовано</string>
+    <string name="publication_failed">Ошибка публикации</string>
+    <string name="offline">Нет подключения</string>
+    <string name="invalid_configuration">Недействительная конфигурация</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="excellent_match">Отличное совпадение</string>
+    <string name="partial_match">Частичная совместимость</string>
+    <string name="unknown_compatibility">Неизвестно</string>
+    <string name="required_components">Необходимые компоненты</string>
+    <string name="device">Устройство</string><string name="soc">SoC</string><string name="gpu">GPU</string><string name="ram">ОЗУ</string><string name="graphics">Графика</string><string name="cpu_box64">CPU / Box64</string><string name="compatibility">Совместимость</string><string name="preview_changes">Предпросмотр изменений</string><string name="online_config_count">Конфигураций: %1$d</string><string name="not_specified">Не указано</string><string name="no_compatible_shortcut">Совместимый ярлык не найден</string><string name="using_cached_data">Используются данные из кэша</string>
 </resources>

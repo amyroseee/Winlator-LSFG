@@ -83,7 +83,7 @@ static void virgl_server_handle_request(struct virgl_client *client)
    }
 
    vrend_renderer_check_fences(client);
-   
+
    switch (header[1]) {
       case VCMD_GET_CAPS:
          ret = virgl_server_send_caps(client, header[0]);
@@ -110,7 +110,7 @@ static void virgl_server_handle_request(struct virgl_client *client)
          ret = virgl_server_flush_frontbuffer(client, header[0]);
          break;
    }
-   
+
    if (ret < 0)
       virgl_server_kill_connection(client);
 }
@@ -119,11 +119,11 @@ JNIEXPORT jlong JNICALL
 Java_com_winlator_xenvironment_components_VirGLRendererComponent_handleNewConnection(JNIEnv *env, jobject obj, jint fd) {
    jni_info.env = env;
    jni_info.obj = obj;
-   
+
    jclass cls = (*env)->GetObjectClass(env, obj);
    jni_info.kill_connection = (*env)->GetMethodID(env, cls, "killConnection", "(I)V");
    jni_info.flush_frontbuffer = (*env)->GetMethodID(env, cls, "flushFrontbuffer", "(II)V");
-   
+
    return (jlong)virgl_server_handle_new_connection(fd);
 }
 

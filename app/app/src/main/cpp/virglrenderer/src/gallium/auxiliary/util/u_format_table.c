@@ -10570,4 +10570,3 @@ util_format_description(enum pipe_format format)
       return NULL;
    }
 }
-

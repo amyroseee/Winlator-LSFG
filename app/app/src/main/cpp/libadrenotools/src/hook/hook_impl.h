@@ -27,4 +27,3 @@ int hook_gsl_memory_free_pure(void *memDesc);
 #ifdef __cplusplus
 }
 #endif
-

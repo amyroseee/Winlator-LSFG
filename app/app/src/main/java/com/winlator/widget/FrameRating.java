@@ -59,7 +59,7 @@ public class FrameRating extends FrameLayout implements Runnable {
                 gpuPanel.setVisibility(GONE);
                 ramPanel.setVisibility(GONE);
                 cpuPanel.setVisibility(GONE);
-                
+
                 activityManager = null;
                 memoryInfo = null;
                 break;

@@ -10,8 +10,8 @@
 #define COMPAT_ATTRIBUTE in
 #define COMPAT_TEXTURE texture
 #else
-#define COMPAT_VARYING varying 
-#define COMPAT_ATTRIBUTE attribute 
+#define COMPAT_VARYING varying
+#define COMPAT_ATTRIBUTE attribute
 #define COMPAT_TEXTURE texture2D
 #endif
 
@@ -221,7 +221,7 @@ void FsrEasuF(
     //  a b
     //  r g
     vec2 p0 = fp * con1.xy + con1.zw;
-    
+
     // These are from p0 to avoid pulling two constants on pre-Navi hardware.
     vec2 p1 = p0 + con2.xy;
     vec2 p2 = p0 + con2.zw;
@@ -243,7 +243,7 @@ void FsrEasuF(
     vec3 gC = FsrEasuCF(p2 + off.xz); float gL = gC.g + 0.5 *(gC.r + gC.b);
     vec3 oC = FsrEasuCF(p3 + off.yz); float oL = oC.g + 0.5 *(oC.r + oC.b);
     vec3 nC = FsrEasuCF(p3 + off.xz); float nL = nC.g + 0.5 *(nC.r + nC.b);
-   
+
     //------------------------------------------------------------------------------------------------------------------------------
     // Simplest multi-channel approximate luma possible (luma times 2, in 2 FMA/MAD).
     // Accumulate for bilinear interpolation.
@@ -311,9 +311,9 @@ void main()
 {
     vec3 c;
     vec4 con0,con1,con2,con3;
-    
+
     vec2 fragCoord = vTexCoord.xy * OutputSize.xy;
-    
+
     FsrEasuCon(
         con0, con1, con2, con3, SourceSize.xy, SourceSize.xy, OutputSize.xy
     );

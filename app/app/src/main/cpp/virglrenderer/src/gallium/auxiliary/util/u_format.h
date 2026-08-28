@@ -94,7 +94,7 @@ struct util_format_block
 {
    /** Block width in pixels */
    unsigned width;
-   
+
    /** Block height in pixels */
    unsigned height;
 
@@ -231,7 +231,7 @@ struct util_format_description
 };
 
 
-extern const struct util_format_description 
+extern const struct util_format_description
 util_format_description_table[];
 
 
@@ -284,7 +284,7 @@ util_format_is_plain(enum pipe_format format)
    return desc->layout == UTIL_FORMAT_LAYOUT_PLAIN ? TRUE : FALSE;
 }
 
-static inline boolean 
+static inline boolean
 util_format_is_compressed(enum pipe_format format)
 {
    const struct util_format_description *desc = util_format_description(format);
@@ -306,7 +306,7 @@ util_format_is_compressed(enum pipe_format format)
    }
 }
 
-static inline boolean 
+static inline boolean
 util_format_is_s3tc(enum pipe_format format)
 {
    const struct util_format_description *desc = util_format_description(format);
@@ -319,7 +319,7 @@ util_format_is_s3tc(enum pipe_format format)
    return desc->layout == UTIL_FORMAT_LAYOUT_S3TC ? TRUE : FALSE;
 }
 
-static inline boolean 
+static inline boolean
 util_format_is_srgb(enum pipe_format format)
 {
    const struct util_format_description *desc = util_format_description(format);

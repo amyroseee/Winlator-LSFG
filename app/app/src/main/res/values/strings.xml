@@ -169,6 +169,7 @@
     <string name="conservative">Conservative</string>
     <string name="intermediate">Intermediate</string>
     <string name="performance">Performance</string>
+    <string name="unity_preset">Unity Preset</string>
     <string name="preset">Preset</string>
     <string name="you_cannot_remove_this_preset">You cannot remove this preset</string>
     <string name="you_cannot_remove_this_component_version">You cannot remove this component version</string>
@@ -216,6 +217,17 @@
     <string name="box64_env_var_help__dynarec_callret" translatable="false">Optimization of CALL/RET opcodes</string>
     <string name="box64_env_var_help__dynarec_wait" translatable="false">Defines whether or not Dynarec will wait for the FillBlock to be ready</string>
     <string name="box64_env_var_help__dynarec_nativeflags" translatable="false">The generated code will use native flags, if possible</string>
+    <string name="box64_env_var_help__dynarec_aligned_atomics"><![CDATA[Generate aligned atomics only on Arm64. <b>1</b> uses smaller, faster code but can cause SIGBUS on unaligned LOCK operations; <b>0</b> handles unaligned atomics.]]></string>
+    <string name="box64_env_var_help__dynarec_df">Enable deferred flags. Disabling it can reduce optimization and may affect compatibility.</string>
+    <string name="box64_env_var_help__dynarec_dirty"><![CDATA[Allow DynaRec to continue a potentially dirty block. <b>1</b> can speed loading but may cause unexpected crashes; <b>2</b> also avoids write-protecting detected hot pages and may miss some self-modifying-code changes.]]></string>
+    <string name="box64_env_var_help__dynarec_pause">Selects x86 PAUSE emulation: <b>0</b> ignores it, <b>1</b> uses YIELD, <b>2</b> uses WFI, and <b>3</b> uses SEVL+WFE. These modes can affect spinlock behavior and compatibility.</string>
+    <string name="box64_env_var_help__dynarec_div0">Controls generation of division-by-zero exceptions. Enable it when software depends on the x86 exception; otherwise behavior may differ.</string>
+    <string name="box64_env_var_help__dynarec_tbb">Controls libtbb detection. When enabled, Box64 detects libtbb and applies conservative settings; it does not enable a performance mode.</string>
+    <string name="box64_env_var_help__dynarec_sep">Adds secondary entry points to optimize CALL/RET when CALLRET is enabled: <b>1</b> for known binaries, <b>2</b> for all memory. It may reduce duplicate blocks but can affect compatibility.</string>
+    <string name="box64_env_var_help__dynarec_nohotpage">Controls hot-page detection, for pages where code executes while data is written. Disabling detection can miss self-modifying-code changes and cause crashes.</string>
+    <string name="box64_env_var_help__dynarec_volatile_metadata">Uses volatile metadata from PE files to guide strong-memory emulation. It is valid only for 64-bit Windows games; disabling it removes that guidance.</string>
+    <string name="box64_env_var_help__unityplayer">Detects UnityPlayer and applies conservative settings, including BOX64_UNITY=1 when detected. It does not guarantee higher FPS.</string>
+    <string name="box64_env_var_help__unity">Marks the game as Unity: uses special Windows detection and applies BOX64_DYNAREC_STRONGMEM=1 on Linux. It changes compatibility behavior, not a guaranteed FPS boost.</string>
     <string name="columns">Columns</string>
     <string name="directinput_mapper_type">DirectInput Mapper Type</string>
     <string name="desktop">Desktop</string>
@@ -391,4 +403,35 @@
     <string name="restoring_save_data">Restoring save data</string>
     <string name="restore_completed">Restore completed</string>
     <string name="restore_failed">Restore failed</string>
+    <string name="restore_previous_configuration">Restore previous configuration</string>
+    <string name="save_working_configuration">Save working configuration</string>
+    <string name="apply_working_configuration">Apply working configuration</string>
+    <string name="confirm_restore_configuration">Restore the previous configuration?</string>
+    <string name="confirm_apply_working_configuration">Apply the working configuration?</string>
+    <string name="recovery">RECOVERY</string>
+    <string name="online_game_configs">Online Game Settings</string><string name="game">Game</string><string name="compatible_match">Compatible</string><string name="information_only">information only</string><string name="installed">Installed</string><string name="missing">Missing</string>
+    <string name="select_shortcut">Select shortcut</string>
+    <string name="configuration_applied">Settings applied</string>
+    <string name="no_online_configs">No online settings found</string>
+    <string name="online_configs_found">Online settings</string>
+    <string name="search">Search</string>
+    <string name="missing_component">Missing component</string>
+    <string name="config_requires_component">These settings require %1$s</string>
+    <string name="component_not_available">Required component is not available</string>
+    <string name="download">Download</string>
+    <string name="apply">Apply</string>
+    <string name="preview">Preview</string>
+    <string name="refresh">Refresh</string>
+    <string name="publish_config">Publish Settings</string>
+    <string name="publishing">Publishing...</string>
+    <string name="published_successfully">Published successfully</string>
+    <string name="publication_failed">Publication failed</string>
+    <string name="offline">Offline</string>
+    <string name="invalid_configuration">Invalid settings</string>
+    <string name="confirm">Confirm</string>
+    <string name="excellent_match">Excellent Match</string>
+    <string name="partial_match">Partial Match</string>
+    <string name="unknown_compatibility">Unknown</string>
+    <string name="required_components">Required Components</string>
+    <string name="device">Device</string><string name="soc">SoC</string><string name="gpu">GPU</string><string name="ram">RAM</string><string name="graphics">Graphics</string><string name="cpu_box64">CPU / Box64</string><string name="compatibility">Compatibility</string><string name="preview_changes">Preview Changes</string><string name="online_config_count">%1$d settings</string><string name="online_setting_singular">1 setting</string><string name="not_specified">Not specified</string><string name="no_compatible_shortcut">No compatible shortcut found</string><string name="using_cached_data">Using cached data</string>
 </resources>

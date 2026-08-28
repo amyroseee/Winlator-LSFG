@@ -17,7 +17,7 @@
         android:scaleType="fitCenter"
         android:src="@drawable/number_picker_decrement"
         app:tint="#ffffff" />
-    
+
     <EditText
         style="@style/EditText"
         android:id="@+id/EditText"

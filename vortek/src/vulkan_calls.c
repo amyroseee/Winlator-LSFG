@@ -80,7 +80,7 @@ VkResult vt_call_vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhys
     VT_CALL_LOCK();
     if (!pPhysicalDevices) *pPhysicalDeviceCount = 0;
     VkObject* instanceObject = VkObject_fromHandle(instance);
-    
+
     VT_SERIALIZE_CMD(vkEnumeratePhysicalDevices, (VkInstance)&instanceObject->id, pPhysicalDeviceCount, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ENUMERATE_PHYSICAL_DEVICES, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -101,11 +101,11 @@ PFN_vkVoidFunction vt_call_vkGetInstanceProcAddr(VkInstance instance, const char
 void vt_call_vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(VkPhysicalDevice, (VkPhysicalDevice)&physicalDeviceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceProperties(pProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -114,7 +114,7 @@ void vt_call_vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalD
     VT_CALL_LOCK();
     if (!pQueueFamilyProperties) *pQueueFamilyPropertyCount = 0;
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceQueueFamilyProperties, (VkPhysicalDevice)&physicalDeviceObject->id, pQueueFamilyPropertyCount, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_QUEUE_FAMILY_PROPERTIES);
     VT_RECV_CHECKED();
@@ -126,11 +126,11 @@ void vt_call_vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalD
 void vt_call_vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(VkPhysicalDevice, (VkPhysicalDevice)&physicalDeviceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_MEMORY_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceMemoryProperties(pMemoryProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -138,11 +138,11 @@ void vt_call_vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice
 void vt_call_vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(VkPhysicalDevice, (VkPhysicalDevice)&physicalDeviceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_FEATURES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceFeatures(pFeatures, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -150,11 +150,11 @@ void vt_call_vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhys
 void vt_call_vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceFormatProperties, (VkPhysicalDevice)&physicalDeviceObject->id, format, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_FORMAT_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkFormatProperties(pFormatProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -162,7 +162,7 @@ void vt_call_vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice
 VkResult vt_call_vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceImageFormatProperties, (VkPhysicalDevice)&physicalDeviceObject->id, format, type, tiling, usage, flags, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_IMAGE_FORMAT_PROPERTIES, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -202,16 +202,16 @@ void vt_call_vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllo
 
 VkResult vt_call_vkEnumerateInstanceVersion(uint32_t* pApiVersion) {
     VT_CALL_LOCK();
-    
+
     int bytesSent = vt_send(serverRing, REQUEST_CODE_VK_ENUMERATE_INSTANCE_VERSION, NULL, 0);
     if (bytesSent < 0) {
         VT_CALL_UNLOCK();
         return VK_ERROR_DEVICE_LOST;
     }
-    
+
     VT_RECV_CHECKED(VT_RETURN);
     *pApiVersion = *(uint32_t*)(inputBuffer);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -256,16 +256,16 @@ VkResult vt_call_vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalD
 void vt_call_vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceQueue, (VkDevice)&deviceObject->id, queueFamilyIndex, queueIndex, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_QUEUE);
     VT_RECV_CHECKED();
-    
+
     uint64_t queueId;
     vt_unserialize_VkQueue((VkQueue)&queueId, inputBuffer, &globalMemoryPool);
     VkObject* queueObject = VkObject_create(VK_OBJECT_TYPE_QUEUE, queueId);
     *pQueue = VkObject_toHandle(queueObject);
-       
+
     VT_CALL_UNLOCK();
 }
 
@@ -273,12 +273,12 @@ VkResult vt_call_vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubm
     VT_CALL_LOCK();
     VkObject* queueObject = VkObject_fromHandle(queue);
     VkObject* fenceObject = VkObject_fromHandle(fence);
-    
+
     bool shouldWait = RingBuffer_hasStatus(clientRing, RING_STATUS_WAIT);
-    
+
     VT_SERIALIZE_CMD(vkQueueSubmit, (VkQueue)&queueObject->id, submitCount, pSubmits, (VkFence)&fenceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_QUEUE_SUBMIT, VT_RETURN);
-    
+
     if (shouldWait) {
         VT_RECV_CHECKED(VT_RETURN);
         VT_CALL_UNLOCK();
@@ -286,7 +286,7 @@ VkResult vt_call_vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubm
     }
     else {
         VT_CALL_UNLOCK();
-        return VK_SUCCESS;        
+        return VK_SUCCESS;
     }
 }
 
@@ -297,9 +297,9 @@ VkResult vt_call_vkQueueWaitIdle(VkQueue queue) {
     VT_SERIALIZE_CMD(VkQueue, (VkQueue)&queueObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_QUEUE_WAIT_IDLE, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;  
+    return (VkResult)result;
 }
 
 VkResult vt_call_vkDeviceWaitIdle(VkDevice device) {
@@ -309,15 +309,15 @@ VkResult vt_call_vkDeviceWaitIdle(VkDevice device) {
     VT_SERIALIZE_CMD(VkDevice, (VkDevice)&deviceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_DEVICE_WAIT_IDLE, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;  
+    return (VkResult)result;
 }
 
 VkResult vt_call_vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkAllocateMemory, (VkDevice)&deviceObject->id, pAllocateInfo, NULL, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ALLOCATE_MEMORY, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -327,7 +327,7 @@ VkResult vt_call_vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* p
         vt_unserialize_VkDeviceMemory((VkDeviceMemory)&memoryId, inputBuffer, &globalMemoryPool);
         VkObject* memoryObject = VkObject_create(VK_OBJECT_TYPE_DEVICE_MEMORY, memoryId);
         *pMemory = VkObject_toHandle(memoryObject);
-        
+
         MappedMemory* mappedMemory = calloc(1, sizeof(MappedMemory));
         mappedMemory->allocationSize = pAllocateInfo->allocationSize;
         memoryObject->tag = mappedMemory;
@@ -342,18 +342,18 @@ void vt_call_vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAlloca
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* memoryObject = VkObject_fromHandle(memory);
-    
+
     if (memoryObject->tag) MEMFREE(memoryObject->tag);
 
     VT_SERIALIZE_CMD(vkFreeMemory, (VkDevice)&deviceObject->id, (VkDeviceMemory)&memoryObject->id, NULL);
     vt_send(serverRing, REQUEST_CODE_VK_FREE_MEMORY, outputBuffer, bufferSize);
-    
+
     VkObject_free(memoryObject);
     VT_CALL_UNLOCK();
 }
 
 VkResult vt_call_vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) {
-    VT_CALL_LOCK();    
+    VT_CALL_LOCK();
     VkObject* memoryObject = VkObject_fromHandle(memory);
 
     MappedMemory* mappedMemory = memoryObject->tag;
@@ -361,16 +361,16 @@ VkResult vt_call_vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSiz
         VT_CALL_UNLOCK();
         return VK_SUCCESS;
     }
-    
-    VT_SERIALIZE_CMD(VkDeviceMemory, (VkDeviceMemory)&memoryObject->id);    
+
+    VT_SERIALIZE_CMD(VkDeviceMemory, (VkDeviceMemory)&memoryObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_MAP_MEMORY, VT_RETURN);
-    
+
     int fd, result, numFds;
     recv_fds(serverFd, &fd, &numFds, &result, sizeof(VkResult));
     if (numFds == 1) {
         if (size == VK_WHOLE_SIZE) size = mappedMemory->allocationSize;
         mappedMemory->size = size;
-        
+
         void* data = mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, offset);
         if (data != MAP_FAILED) {
             CLOSEFD(fd);
@@ -380,7 +380,7 @@ VkResult vt_call_vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSiz
         else result = VK_ERROR_MEMORY_MAP_FAILED;
     }
     else result = VK_ERROR_MEMORY_MAP_FAILED;
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -388,7 +388,7 @@ VkResult vt_call_vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSiz
 void vt_call_vkUnmapMemory(VkDevice device, VkDeviceMemory memory) {
     VT_CALL_LOCK();
     VkObject* memoryObject = VkObject_fromHandle(memory);
-    
+
     if (memoryObject->tag) {
         MappedMemory* mappedMemory = memoryObject->tag;
         if (mappedMemory->data) {
@@ -403,11 +403,11 @@ void vt_call_vkUnmapMemory(VkDevice device, VkDeviceMemory memory) {
 VkResult vt_call_vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkFlushMappedMemoryRanges, (VkDevice)&deviceObject->id, memoryRangeCount, pMemoryRanges);
     VT_SEND_CHECKED(REQUEST_CODE_VK_FLUSH_MAPPED_MEMORY_RANGES, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -415,11 +415,11 @@ VkResult vt_call_vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRange
 VkResult vt_call_vkInvalidateMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkInvalidateMappedMemoryRanges, (VkDevice)&deviceObject->id, memoryRangeCount, pMemoryRanges);
     VT_SEND_CHECKED(REQUEST_CODE_VK_INVALIDATE_MAPPED_MEMORY_RANGES, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -428,7 +428,7 @@ void vt_call_vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory,
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* memoryObject = VkObject_fromHandle(memory);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceMemoryCommitment, (VkDevice)&deviceObject->id, (VkDeviceMemory)&memoryObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_MEMORY_COMMITMENT);
     VT_RECV_CHECKED();
@@ -441,11 +441,11 @@ void vt_call_vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkM
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* bufferObject = VkObject_fromHandle(buffer);
-    
+
     VT_SERIALIZE_CMD(vkGetBufferMemoryRequirements, (VkDevice)&deviceObject->id, (VkBuffer)&bufferObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_BUFFER_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -455,24 +455,24 @@ VkResult vt_call_vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMe
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* bufferObject = VkObject_fromHandle(buffer);
     VkObject* memoryObject = VkObject_fromHandle(memory);
-    
+
     VT_SERIALIZE_CMD(vkBindBufferMemory, (VkDevice)&deviceObject->id, (VkBuffer)&bufferObject->id, (VkDeviceMemory)&memoryObject->id, memoryOffset);
     VT_SEND_CHECKED(REQUEST_CODE_VK_BIND_BUFFER_MEMORY, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;    
+    return (VkResult)result;
 }
 
 void vt_call_vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* imageObject = VkObject_fromHandle(image);
-    
+
     VT_SERIALIZE_CMD(vkGetImageMemoryRequirements, (VkDevice)&deviceObject->id, (VkImage)&imageObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_IMAGE_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -482,11 +482,11 @@ VkResult vt_call_vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemor
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* imageObject = VkObject_fromHandle(image);
     VkObject* memoryObject = VkObject_fromHandle(memory);
-    
+
     VT_SERIALIZE_CMD(vkBindImageMemory, (VkDevice)&deviceObject->id, (VkImage)&imageObject->id, (VkDeviceMemory)&memoryObject->id, memoryOffset);
     VT_SEND_CHECKED(REQUEST_CODE_VK_BIND_IMAGE_MEMORY, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -496,7 +496,7 @@ void vt_call_vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, 
     if (!pSparseMemoryRequirements) *pSparseMemoryRequirementCount = 0;
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* imageObject = VkObject_fromHandle(image);
-    
+
     VT_SERIALIZE_CMD(vkGetImageSparseMemoryRequirements, (VkDevice)&deviceObject->id, (VkImage)&imageObject->id, pSparseMemoryRequirementCount, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_IMAGE_SPARSE_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
@@ -509,7 +509,7 @@ void vt_call_vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice phy
     VT_CALL_LOCK();
     if (!pProperties) *pPropertyCount = 0;
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceSparseImageFormatProperties, (VkPhysicalDevice)&physicalDeviceObject->id, format, type, samples, usage, tiling, pPropertyCount, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_SPARSE_IMAGE_FORMAT_PROPERTIES);
     VT_RECV_CHECKED();
@@ -522,11 +522,11 @@ VkResult vt_call_vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const 
     VT_CALL_LOCK();
     VkObject* queueObject = VkObject_fromHandle(queue);
     VkObject* fenceObject = VkObject_fromHandle(fence);
-    
+
     VT_SERIALIZE_CMD(vkQueueBindSparse, (VkQueue)&queueObject->id, bindInfoCount, pBindInfo, (VkFence)&fenceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_QUEUE_BIND_SPARSE, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -562,11 +562,11 @@ void vt_call_vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCa
 
 VkResult vt_call_vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences) {
     VT_CALL_LOCK();
-    VkObject* deviceObject = VkObject_fromHandle(device);    
-    
+    VkObject* deviceObject = VkObject_fromHandle(device);
+
     VT_SERIALIZE_CMD(vkResetFences, (VkDevice)&deviceObject->id, fenceCount, pFences);
     VT_SEND_CHECKED(REQUEST_CODE_VK_RESET_FENCES, VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -579,9 +579,9 @@ VkResult vt_call_vkGetFenceStatus(VkDevice device, VkFence fence) {
     VT_SERIALIZE_CMD(vkGetFenceStatus, (VkDevice)&deviceObject->id, (VkFence)&fenceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_FENCE_STATUS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;    
+    return (VkResult)result;
 }
 
 VkResult vt_call_vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout) {
@@ -590,25 +590,25 @@ VkResult vt_call_vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkF
 
     VT_SERIALIZE_CMD(vkWaitForFences, (VkDevice)&deviceObject->id, fenceCount, pFences, waitAll, timeout);
     VT_SEND_CHECKED(REQUEST_CODE_VK_WAIT_FOR_FENCES, VT_RETURN);
-    
+
     if (timeout == 0) {
         VT_RECV_CHECKED(VT_RETURN);
-        
+
         VT_CALL_UNLOCK();
-        return (VkResult)result;   
+        return (VkResult)result;
     }
     else {
         int fds[fenceCount];
         int result, numFds;
         recv_fds(serverFd, fds, &numFds, &result, sizeof(VkResult));
         VT_CALL_UNLOCK();
-        
+
         if (numFds == 0 || result != VK_SUCCESS) return VK_ERROR_DEVICE_LOST;
         int timeoutMs = timeout != UINT64_MAX ? timeout / 1000000 : 0;
         result = waitForEvents(fds, numFds, waitAll ? true : false, timeoutMs);
         for (int i = 0; i < numFds; i++) CLOSEFD(fds[i]);
         return result == EVENT_RESULT_TIMEOUT ? VK_TIMEOUT : (result == EVENT_RESULT_SUCCESS ? VK_SUCCESS : VK_ERROR_DEVICE_LOST);
-    } 
+    }
 }
 
 VkResult vt_call_vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSemaphore* pSemaphore) {
@@ -677,9 +677,9 @@ VkResult vt_call_vkGetEventStatus(VkDevice device, VkEvent event) {
     VT_SERIALIZE_CMD(vkGetEventStatus, (VkDevice)&deviceObject->id, (VkEvent)&eventObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_EVENT_STATUS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;  
+    return (VkResult)result;
 }
 
 VkResult vt_call_vkSetEvent(VkDevice device, VkEvent event) {
@@ -690,9 +690,9 @@ VkResult vt_call_vkSetEvent(VkDevice device, VkEvent event) {
     VT_SERIALIZE_CMD(vkSetEvent, (VkDevice)&deviceObject->id, (VkEvent)&eventObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_SET_EVENT, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result; 
+    return (VkResult)result;
 }
 
 VkResult vt_call_vkResetEvent(VkDevice device, VkEvent event) {
@@ -703,7 +703,7 @@ VkResult vt_call_vkResetEvent(VkDevice device, VkEvent event) {
     VT_SERIALIZE_CMD(vkResetEvent, (VkDevice)&deviceObject->id, (VkEvent)&eventObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_RESET_EVENT, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -741,11 +741,11 @@ VkResult vt_call_vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, u
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* queryPoolObject = VkObject_fromHandle(queryPool);
-    
+
     VT_SERIALIZE_CMD(vkGetQueryPoolResults, (VkDevice)&deviceObject->id, (VkQueryPool)&queryPoolObject->id, firstQuery, queryCount, dataSize, NULL, stride, flags);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_QUERY_POOL_RESULTS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     vt_unserialize_vkGetQueryPoolResults(VK_NULL_HANDLE, VK_NULL_HANDLE, NULL, NULL, NULL, pData, NULL, NULL, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
@@ -755,7 +755,7 @@ void vt_call_vkResetQueryPool(VkDevice device, VkQueryPool queryPool, uint32_t f
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* queryPoolObject = VkObject_fromHandle(queryPool);
-    
+
     VT_SERIALIZE_CMD(vkResetQueryPool, (VkDevice)&deviceObject->id, (VkQueryPool)&queryPoolObject->id, firstQuery, queryCount);
     vt_send(serverRing, REQUEST_CODE_VK_RESET_QUERY_POOL, outputBuffer, bufferSize);
 
@@ -853,11 +853,11 @@ void vt_call_vkGetImageSubresourceLayout(VkDevice device, VkImage image, const V
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* imageObject = VkObject_fromHandle(image);
-    
+
     VT_SERIALIZE_CMD(vkGetImageSubresourceLayout, (VkDevice)&deviceObject->id, (VkImage)&imageObject->id, pSubresource, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_IMAGE_SUBRESOURCE_LAYOUT);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkSubresourceLayout(pLayout, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -954,11 +954,11 @@ VkResult vt_call_vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelin
     if (!pData) *pDataSize = 0;
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* pipelineCacheObject = VkObject_fromHandle(pipelineCache);
-    
+
     VT_SERIALIZE_CMD(vkGetPipelineCacheData, (VkDevice)&deviceObject->id, (VkPipelineCache)&pipelineCacheObject->id, pDataSize, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PIPELINE_CACHE_DATA, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     vt_unserialize_vkGetPipelineCacheData(VK_NULL_HANDLE, VK_NULL_HANDLE, pDataSize, pData, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
@@ -968,11 +968,11 @@ VkResult vt_call_vkMergePipelineCaches(VkDevice device, VkPipelineCache dstCache
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* dstCacheObject = VkObject_fromHandle(dstCache);
-    
+
     VT_SERIALIZE_CMD(vkMergePipelineCaches, (VkDevice)&deviceObject->id, (VkPipelineCache)&dstCacheObject->id, srcCacheCount, pSrcCaches);
     VT_SEND_CHECKED(REQUEST_CODE_VK_MERGE_PIPELINE_CACHES, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -1110,7 +1110,7 @@ VkResult vt_call_vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolC
     vt_unserialize_VkDescriptorPool((VkDescriptorPool)&descriptorPoolId, inputBuffer, &globalMemoryPool);
     VkObject* descriptorPoolObject = VkObject_create(VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPoolId);
     *pDescriptorPool = VkObject_toHandle(descriptorPoolObject);
-    
+
     bool canFreeObjects = (pCreateInfo->flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
     descriptorPoolObject->tag = VkObjectPool_create(VK_OBJECT_TYPE_DESCRIPTOR_SET, pCreateInfo->maxSets, canFreeObjects);
 
@@ -1125,7 +1125,7 @@ void vt_call_vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descripto
 
     VT_SERIALIZE_CMD(vkDestroyDescriptorPool, (VkDevice)&deviceObject->id, (VkDescriptorPool)&descriptorPoolObject->id, NULL);
     vt_send(serverRing, REQUEST_CODE_VK_DESTROY_DESCRIPTOR_POOL, outputBuffer, bufferSize);
-    
+
     VkObjectPool_destroy((VkObjectPool*)descriptorPoolObject->tag);
     VkObject_free(descriptorPoolObject);
     VT_CALL_UNLOCK();
@@ -1135,12 +1135,12 @@ VkResult vt_call_vkResetDescriptorPool(VkDevice device, VkDescriptorPool descrip
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* descriptorPoolObject = VkObject_fromHandle(descriptorPool);
-    
+
     VT_SERIALIZE_CMD(vkResetDescriptorPool, (VkDevice)&deviceObject->id, (VkDescriptorPool)&descriptorPoolObject->id, flags);
     VT_SEND_CHECKED(REQUEST_CODE_VK_RESET_DESCRIPTOR_POOL, VT_RETURN);
-    
+
     VkObjectPool_reset((VkObjectPool*)descriptorPoolObject->tag);
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -1149,31 +1149,31 @@ VkResult vt_call_vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSet
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* descriptorPoolObject = VkObject_fromHandle(pAllocateInfo->descriptorPool);
-    
+
     VT_SERIALIZE_CMD(vkAllocateDescriptorSets, (VkDevice)&deviceObject->id, pAllocateInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ALLOCATE_DESCRIPTOR_SETS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     if (result != VK_SUCCESS) {
         VT_CALL_UNLOCK();
         return (VkResult)result;
     }
-    
+
     VkObjectPool* objectPool = descriptorPoolObject->tag;
     for (int i = 0, j = 0; i < pAllocateInfo->descriptorSetCount; i++, j += VK_HANDLE_BYTE_COUNT) {
         uint64_t descriptorSetId;
         vt_unserialize_VkDescriptorSet((VkDescriptorSet)&descriptorSetId, inputBuffer + j, NULL);
-        
+
         VkObject* descriptorSetObject = VkObjectPool_get(objectPool);
         if (!descriptorSetObject) {
             VT_CALL_UNLOCK();
             return VK_ERROR_OUT_OF_POOL_MEMORY;
-        }        
-        
+        }
+
         descriptorSetObject->id = descriptorSetId;
         pDescriptorSets[i] = VkObject_toHandle(descriptorSetObject);
-    }    
-    
+    }
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -1182,16 +1182,16 @@ VkResult vt_call_vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descript
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* descriptorPoolObject = VkObject_fromHandle(descriptorPool);
-    
+
     VT_SERIALIZE_CMD(vkFreeDescriptorSets, (VkDevice)&deviceObject->id, (VkDescriptorPool)&descriptorPoolObject->id, descriptorSetCount, pDescriptorSets);
     VT_SEND_CHECKED(REQUEST_CODE_VK_FREE_DESCRIPTOR_SETS, VT_RETURN);
-    
+
     VkObjectPool* objectPool = descriptorPoolObject->tag;
     for (int i = 0; i < descriptorSetCount; i++) {
         VkObject* descriptorSetObject = VkObject_fromHandle(pDescriptorSets[i]);
         VkObjectPool_freeObject(objectPool, descriptorSetObject);
     }
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -1199,10 +1199,10 @@ VkResult vt_call_vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descript
 void vt_call_vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkUpdateDescriptorSets, (VkDevice)&deviceObject->id, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     vt_send(serverRing, REQUEST_CODE_VK_UPDATE_DESCRIPTOR_SETS, outputBuffer, bufferSize);
-    
+
     VT_CALL_UNLOCK();
 }
 
@@ -1268,11 +1268,11 @@ void vt_call_vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* renderPassObject = VkObject_fromHandle(renderPass);
-    
+
     VT_SERIALIZE_CMD(vkGetRenderAreaGranularity, (VkDevice)&deviceObject->id, (VkRenderPass)&renderPassObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_RENDER_AREA_GRANULARITY);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkExtent2D(pGranularity, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -1310,10 +1310,10 @@ VkResult vt_call_vkResetCommandPool(VkDevice device, VkCommandPool commandPool, 
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* commandPoolObject = VkObject_fromHandle(commandPool);
-    
+
     VT_SERIALIZE_CMD(vkResetCommandPool, (VkDevice)&deviceObject->id, (VkCommandPool)&commandPoolObject->id, flags);
     VT_SEND_CHECKED(REQUEST_CODE_VK_RESET_COMMAND_POOL, VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -1321,76 +1321,76 @@ VkResult vt_call_vkResetCommandPool(VkDevice device, VkCommandPool commandPool, 
 VkResult vt_call_vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkAllocateCommandBuffers, (VkDevice)&deviceObject->id, pAllocateInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ALLOCATE_COMMAND_BUFFERS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VkCommandBufferAllocateInfo allocateInfo = {0};
     vt_unserialize_vkAllocateCommandBuffers(VK_NULL_HANDLE, &allocateInfo, pCommandBuffers, inputBuffer, &globalMemoryPool);
-    
+
     for (int i = 0; i < pAllocateInfo->commandBufferCount; i++) {
         VkObject* commandBufferObject = VkObject_fromHandle(pCommandBuffers[i]);
         CommandBatch* batch = calloc(1, sizeof(CommandBatch));
         ENSURE_ARRAY_CAPACITY(VK_HANDLE_BYTE_COUNT, batch->capacity, batch->buffer, 1);
         commandBufferObject->tag = batch;
     }
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;    
+    return (VkResult)result;
 }
 
 void vt_call_vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* commandPoolObject = VkObject_fromHandle(commandPool);
-    
+
     for (int i = 0; i < commandBufferCount; i++) {
         VkObject* commandBufferObject = VkObject_fromHandle(pCommandBuffers[i]);
         CommandBatch* batch = commandBufferObject->tag;
         batch->size = 0;
         batch->capacity = 0;
-        
+
         MEMFREE(batch->buffer);
         MEMFREE(commandBufferObject->tag);
     }
-    
+
     VT_SERIALIZE_CMD(vkFreeCommandBuffers, (VkDevice)&deviceObject->id, (VkCommandPool)&commandPoolObject->id, commandBufferCount, pCommandBuffers);
-    vt_send(serverRing, REQUEST_CODE_VK_FREE_COMMAND_BUFFERS, outputBuffer, bufferSize);  
-    
+    vt_send(serverRing, REQUEST_CODE_VK_FREE_COMMAND_BUFFERS, outputBuffer, bufferSize);
+
     VT_CALL_UNLOCK();
 }
 
 VkResult vt_call_vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo) {
     VT_CALL_LOCK();
     VkObject* commandBufferObject = VkObject_fromHandle(commandBuffer);
-    
+
     CommandBatch* batch = commandBufferObject->tag;
     *(uint64_t*)(batch->buffer) = commandBufferObject->id;
     batch->size = VK_HANDLE_BYTE_COUNT;
-    
+
     VT_SERIALIZE_CMD(vkBeginCommandBuffer, (VkCommandBuffer)&commandBufferObject->id, pBeginInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_BEGIN_COMMAND_BUFFER, VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return VK_SUCCESS;    
+    return VK_SUCCESS;
 }
 
 VkResult vt_call_vkEndCommandBuffer(VkCommandBuffer commandBuffer) {
     VT_CALL_LOCK();
     VkObject* commandBufferObject = VkObject_fromHandle(commandBuffer);
     CommandBatch* batch = commandBufferObject->tag;
-    
+
     if (batch->size == 0) {
         VT_CALL_UNLOCK();
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     vt_send(serverRing, REQUEST_CODE_VK_END_COMMAND_BUFFER, batch->buffer, batch->size);
-    
+
     batch->size = 0;
     VT_CALL_UNLOCK();
-    return VK_SUCCESS;   
+    return VK_SUCCESS;
 }
 
 VkResult vt_call_vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags) {
@@ -1398,12 +1398,12 @@ VkResult vt_call_vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBu
     VkObject* commandBufferObject = VkObject_fromHandle(commandBuffer);
     CommandBatch* batch = commandBufferObject->tag;
     batch->size = 0;
-    
-    VT_SERIALIZE_CMD(vkResetCommandBuffer, (VkCommandBuffer)&commandBufferObject->id, flags);    
+
+    VT_SERIALIZE_CMD(vkResetCommandBuffer, (VkCommandBuffer)&commandBufferObject->id, flags);
     VT_SEND_CHECKED(REQUEST_CODE_VK_RESET_COMMAND_BUFFER, VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
-    return VK_SUCCESS;     
+    return VK_SUCCESS;
 }
 
 void vt_call_vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline) {
@@ -1773,11 +1773,11 @@ VkResult vt_call_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice phys
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
     VkObject* surfaceObject = VkObject_fromHandle(surface);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, (VkPhysicalDevice)&physicalDeviceObject->id, (VkSurfaceKHR)&surfaceObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_SURFACE_CAPABILITIES_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     vt_unserialize_VkSurfaceCapabilitiesKHR(pSurfaceCapabilities, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
@@ -1792,7 +1792,7 @@ VkResult vt_call_vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalD
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_SURFACE_FORMATS_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
 
-    vt_unserialize_vkGetPhysicalDeviceSurfaceFormatsKHR(VK_NULL_HANDLE, NULL, pSurfaceFormatCount, pSurfaceFormats, inputBuffer, &globalMemoryPool);    
+    vt_unserialize_vkGetPhysicalDeviceSurfaceFormatsKHR(VK_NULL_HANDLE, NULL, pSurfaceFormatCount, pSurfaceFormats, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -1814,23 +1814,23 @@ VkResult vt_call_vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice phys
 VkResult vt_call_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VkSwapchainCreateInfoKHR createInfo = {0};
     memcpy(&createInfo, pCreateInfo, sizeof(VkSwapchainCreateInfoKHR));
     VkObject* surfaceObject = VkObject_fromHandle(pCreateInfo->surface);
     createInfo.surface = (VkSurfaceKHR)&surfaceObject->id;
-    
+
     VT_SERIALIZE_CMD(vkCreateSwapchainKHR, (VkDevice)&deviceObject->id, &createInfo, NULL, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_CREATE_SWAPCHAIN_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     uint64_t swapchainId;
     vt_unserialize_VkSwapchainKHR((VkSwapchainKHR)&swapchainId, inputBuffer, &globalMemoryPool);
     VkObject* swapchainObject = VkObject_create(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchainId);
     *pSwapchain = VkObject_toHandle(swapchainObject);
-    
+
     VT_CALL_UNLOCK();
-    return (VkResult)result;     
+    return (VkResult)result;
 }
 
 void vt_call_vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator) {
@@ -1855,7 +1855,7 @@ VkResult vt_call_vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapcha
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_SWAPCHAIN_IMAGES_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
 
-    vt_unserialize_vkGetSwapchainImagesKHR(VK_NULL_HANDLE, VK_NULL_HANDLE, pSwapchainImageCount, pSwapchainImages, inputBuffer, &globalMemoryPool);    
+    vt_unserialize_vkGetSwapchainImagesKHR(VK_NULL_HANDLE, VK_NULL_HANDLE, pSwapchainImageCount, pSwapchainImages, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -1866,7 +1866,7 @@ VkResult vt_call_vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain
     VkObject* swapchainObject = VkObject_fromHandle(swapchain);
     VkObject* semaphoreObject = VkObject_fromHandle(semaphore);
     VkObject* fenceObject = VkObject_fromHandle(fence);
- 
+
     VT_SERIALIZE_CMD(vkAcquireNextImageKHR, (VkDevice)&deviceObject->id, (VkSwapchainKHR)&swapchainObject->id, timeout, (VkSemaphore)&semaphoreObject->id, (VkFence)&fenceObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ACQUIRE_NEXT_IMAGE_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -1882,16 +1882,16 @@ VkResult vt_call_vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain
 
 VkResult vt_call_vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
     VT_CALL_LOCK();
-    
+
     VT_SERIALIZE_CMD(VkPresentInfoKHR, pPresentInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_QUEUE_PRESENT_KHR, VT_RETURN);
-    
+
     if (pPresentInfo->pResults) {
         for (int i = 0; i < pPresentInfo->swapchainCount; i++) {
             pPresentInfo->pResults[i] = VK_SUCCESS;
         }
     }
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -1909,11 +1909,11 @@ VkBool32 vt_call_vkGetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice 
 void vt_call_vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2* pFeatures) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceFeatures2, (VkPhysicalDevice)&physicalDeviceObject->id, pFeatures);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_FEATURES2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceFeatures2(pFeatures, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -1921,11 +1921,11 @@ void vt_call_vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhy
 void vt_call_vkGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties2* pProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, pProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_PROPERTIES2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceProperties2(pProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -1933,11 +1933,11 @@ void vt_call_vkGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice, VkP
 void vt_call_vkGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties2* pFormatProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceFormatProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, format, pFormatProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_FORMAT_PROPERTIES2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkFormatProperties2(pFormatProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -1945,7 +1945,7 @@ void vt_call_vkGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevic
 VkResult vt_call_vkGetPhysicalDeviceImageFormatProperties2(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2* pImageFormatInfo, VkImageFormatProperties2* pImageFormatProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceImageFormatProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, pImageFormatInfo, pImageFormatProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_IMAGE_FORMAT_PROPERTIES2, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -1959,7 +1959,7 @@ void vt_call_vkGetPhysicalDeviceQueueFamilyProperties2(VkPhysicalDevice physical
     VT_CALL_LOCK();
     if (!pQueueFamilyProperties) *pQueueFamilyPropertyCount = 0;
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceQueueFamilyProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, pQueueFamilyPropertyCount, pQueueFamilyProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_QUEUE_FAMILY_PROPERTIES2);
     VT_RECV_CHECKED();
@@ -1971,11 +1971,11 @@ void vt_call_vkGetPhysicalDeviceQueueFamilyProperties2(VkPhysicalDevice physical
 void vt_call_vkGetPhysicalDeviceMemoryProperties2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties2* pMemoryProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceMemoryProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, pMemoryProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_MEMORY_PROPERTIES2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkPhysicalDeviceMemoryProperties2(pMemoryProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -1984,7 +1984,7 @@ void vt_call_vkGetPhysicalDeviceSparseImageFormatProperties2(VkPhysicalDevice ph
     VT_CALL_LOCK();
     if (!pProperties) *pPropertyCount = 0;
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceSparseImageFormatProperties2, (VkPhysicalDevice)&physicalDeviceObject->id, pFormatInfo, pPropertyCount, pProperties);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_SPARSE_IMAGE_FORMAT_PROPERTIES2);
     VT_RECV_CHECKED();
@@ -2005,21 +2005,21 @@ void vt_call_vkTrimCommandPool(VkDevice device, VkCommandPool commandPool, VkCom
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* commandPoolObject = VkObject_fromHandle(commandPool);
-    
+
     VT_SERIALIZE_CMD(vkTrimCommandPool, (VkDevice)&deviceObject->id, (VkCommandPool)&commandPoolObject->id, flags);
     VT_SEND_CHECKED(REQUEST_CODE_VK_TRIM_COMMAND_POOL);
-    
+
     VT_CALL_UNLOCK();
 }
 
 void vt_call_vkGetPhysicalDeviceExternalBufferProperties(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalBufferInfo* pExternalBufferInfo, VkExternalBufferProperties* pExternalBufferProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceExternalBufferProperties, (VkPhysicalDevice)&physicalDeviceObject->id, pExternalBufferInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_EXTERNAL_BUFFER_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkExternalBufferProperties(pExternalBufferProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2027,14 +2027,14 @@ void vt_call_vkGetPhysicalDeviceExternalBufferProperties(VkPhysicalDevice physic
 VkResult vt_call_vkGetMemoryFdKHR(VkDevice device, const VkMemoryGetFdInfoKHR* pGetFdInfo, int* pFd) {
     VT_CALL_LOCK();
     VkObject* memoryObject = VkObject_fromHandle(pGetFdInfo->memory);
-    
+
     VT_SERIALIZE_CMD(VkDeviceMemory, (VkDeviceMemory)&memoryObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_MEMORY_FD_KHR, VT_RETURN);
 
     *pFd = -1;
     int result, numFds;
     recv_fds(serverFd, pFd, &numFds, &result, sizeof(VkResult));
-       
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2046,11 +2046,11 @@ VkResult vt_call_vkGetMemoryFdPropertiesKHR(VkDevice device, VkExternalMemoryHan
 void vt_call_vkGetPhysicalDeviceExternalSemaphoreProperties(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalSemaphoreInfo* pExternalSemaphoreInfo, VkExternalSemaphoreProperties* pExternalSemaphoreProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceExternalSemaphoreProperties, (VkPhysicalDevice)&physicalDeviceObject->id, pExternalSemaphoreInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkExternalSemaphoreProperties(pExternalSemaphoreProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2058,14 +2058,14 @@ void vt_call_vkGetPhysicalDeviceExternalSemaphoreProperties(VkPhysicalDevice phy
 VkResult vt_call_vkGetSemaphoreFdKHR(VkDevice device, const VkSemaphoreGetFdInfoKHR* pGetFdInfo, int* pFd) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetSemaphoreFdKHR, (VkDevice)&deviceObject->id, pGetFdInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_SEMAPHORE_FD_KHR, VT_RETURN);
 
     *pFd = -1;
     int result, numFds;
     recv_fds(serverFd, pFd, &numFds, &result, sizeof(VkResult));
-       
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2077,11 +2077,11 @@ VkResult vt_call_vkImportSemaphoreFdKHR(VkDevice device, const VkImportSemaphore
 void vt_call_vkGetPhysicalDeviceExternalFenceProperties(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceExternalFenceInfo* pExternalFenceInfo, VkExternalFenceProperties* pExternalFenceProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceExternalFenceProperties, (VkPhysicalDevice)&physicalDeviceObject->id, pExternalFenceInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_EXTERNAL_FENCE_PROPERTIES);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkExternalFenceProperties(pExternalFenceProperties, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2089,14 +2089,14 @@ void vt_call_vkGetPhysicalDeviceExternalFenceProperties(VkPhysicalDevice physica
 VkResult vt_call_vkGetFenceFdKHR(VkDevice device, const VkFenceGetFdInfoKHR* pGetFdInfo, int* pFd) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetFenceFdKHR, (VkDevice)&deviceObject->id, pGetFdInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_FENCE_FD_KHR, VT_RETURN);
 
     *pFd = -1;
     int result, numFds;
     recv_fds(serverFd, pFd, &numFds, &result, sizeof(VkResult));
-       
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2122,11 +2122,11 @@ VkResult vt_call_vkEnumeratePhysicalDeviceGroups(VkInstance instance, uint32_t* 
 void vt_call_vkGetDeviceGroupPeerMemoryFeatures(VkDevice device, uint32_t heapIndex, uint32_t localDeviceIndex, uint32_t remoteDeviceIndex, VkPeerMemoryFeatureFlags* pPeerMemoryFeatures) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceGroupPeerMemoryFeatures, (VkDevice)&deviceObject->id, heapIndex, localDeviceIndex, remoteDeviceIndex, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_GROUP_PEER_MEMORY_FEATURES);
     VT_RECV_CHECKED();
-    
+
     *pPeerMemoryFeatures = *(uint32_t*)(inputBuffer);
     VT_CALL_UNLOCK();
 }
@@ -2134,11 +2134,11 @@ void vt_call_vkGetDeviceGroupPeerMemoryFeatures(VkDevice device, uint32_t heapIn
 VkResult vt_call_vkBindBufferMemory2(VkDevice device, uint32_t bindInfoCount, const VkBindBufferMemoryInfo* pBindInfos) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkBindBufferMemory2, (VkDevice)&deviceObject->id, bindInfoCount, pBindInfos);
     VT_SEND_CHECKED(REQUEST_CODE_VK_BIND_BUFFER_MEMORY2, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2146,11 +2146,11 @@ VkResult vt_call_vkBindBufferMemory2(VkDevice device, uint32_t bindInfoCount, co
 VkResult vt_call_vkBindImageMemory2(VkDevice device, uint32_t bindInfoCount, const VkBindImageMemoryInfo* pBindInfos) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkBindImageMemory2, (VkDevice)&deviceObject->id, bindInfoCount, pBindInfos);
     VT_SEND_CHECKED(REQUEST_CODE_VK_BIND_IMAGE_MEMORY2, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2166,7 +2166,7 @@ VkResult vt_call_vkGetDeviceGroupPresentCapabilitiesKHR(VkDevice device, VkDevic
     memset(pDeviceGroupPresentCapabilities->presentMask, 0, sizeof(pDeviceGroupPresentCapabilities->presentMask));
     pDeviceGroupPresentCapabilities->presentMask[0] = 0x1;
     pDeviceGroupPresentCapabilities->modes = VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR;
-    
+
     return VK_SUCCESS;
 }
 
@@ -2177,7 +2177,7 @@ VkResult vt_call_vkGetDeviceGroupSurfacePresentModesKHR(VkDevice device, VkSurfa
 
 VkResult vt_call_vkAcquireNextImage2KHR(VkDevice device, const VkAcquireNextImageInfoKHR* pAcquireInfo, uint32_t* pImageIndex) {
     VT_CALL_LOCK();
- 
+
     VT_SERIALIZE_CMD(VkAcquireNextImageInfoKHR, pAcquireInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_ACQUIRE_NEXT_IMAGE2_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
@@ -2203,18 +2203,18 @@ VkResult vt_call_vkGetPhysicalDevicePresentRectanglesKHR(VkPhysicalDevice physic
     if (!pRects) *pRectCount = 0;
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
     VkObject* surfaceObject = VkObject_fromHandle(surface);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDevicePresentRectanglesKHR, (VkPhysicalDevice)&physicalDeviceObject->id, (VkSurfaceKHR)&surfaceObject->id, pRectCount, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_PRESENT_RECTANGLES_KHR, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     vt_unserialize_vkGetPhysicalDevicePresentRectanglesKHR(VK_NULL_HANDLE, VK_NULL_HANDLE, pRectCount, pRects, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
 
 VkResult vt_call_vkCreateDescriptorUpdateTemplate(VkDevice device, const VkDescriptorUpdateTemplateCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorUpdateTemplate* pDescriptorUpdateTemplate) {
-    VT_CALL_LOCK();    
+    VT_CALL_LOCK();
     DescriptorUpdateTemplateInfo* descriptorUpdateTemplateInfo = DescriptorUpdateTemplate_create(pCreateInfo->pDescriptorUpdateEntries, pCreateInfo->descriptorUpdateEntryCount, pCreateInfo->pipelineBindPoint);
     VkObject* descriptorUpdateTemplateObject = VkObject_create(VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE, (uint64_t)descriptorUpdateTemplateInfo);
     descriptorUpdateTemplateObject->tag = descriptorUpdateTemplateInfo;
@@ -2249,8 +2249,8 @@ void vt_call_vkUpdateDescriptorSetWithTemplate(VkDevice device, VkDescriptorSet 
     DescriptorUpdateTemplate_fillDescriptorWrites(descriptorUpdateTemplateInfo, descriptorSet, imageInfos, bufferInfos, texelBufferViews, descriptorWrites, pData);
 
     VT_SERIALIZE_CMD(vkUpdateDescriptorSets, (VkDevice)&deviceObject->id, descriptorUpdateTemplateInfo->entryCount, descriptorWrites, 0, NULL);
-    vt_send(serverRing, REQUEST_CODE_VK_UPDATE_DESCRIPTOR_SETS, outputBuffer, bufferSize);   
-    
+    vt_send(serverRing, REQUEST_CODE_VK_UPDATE_DESCRIPTOR_SETS, outputBuffer, bufferSize);
+
     VT_CALL_UNLOCK();
 }
 
@@ -2266,7 +2266,7 @@ void vt_call_vkCmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer commandBuffer
     VkBufferView texelBufferViews[descriptorUpdateTemplateInfo->texelBufferViewCount];
 
     DescriptorUpdateTemplate_fillDescriptorWrites(descriptorUpdateTemplateInfo, VK_NULL_HANDLE, imageInfos, bufferInfos, texelBufferViews, descriptorWrites, pData);
-    
+
     CommandBatch* batch = commandBufferObject->tag;
     VT_CMD_ENQUEUE(vkCmdPushDescriptorSetKHR, REQUEST_CODE_VK_CMD_PUSH_DESCRIPTOR_SET_KHR, batch, (VkCommandBuffer)&commandBufferObject->id, descriptorUpdateTemplateInfo->pipelineBindPoint, (VkPipelineLayout)&layoutObject->id, set, descriptorUpdateTemplateInfo->entryCount, descriptorWrites);
 }
@@ -2281,7 +2281,7 @@ void vt_call_vkCmdSetSampleLocationsEXT(VkCommandBuffer commandBuffer, const VkS
 void vt_call_vkGetPhysicalDeviceMultisamplePropertiesEXT(VkPhysicalDevice physicalDevice, VkSampleCountFlagBits samples, VkMultisamplePropertiesEXT* pMultisampleProperties) {
     VT_CALL_LOCK();
     VkObject* physicalDeviceObject = VkObject_fromHandle(physicalDevice);
-    
+
     VT_SERIALIZE_CMD(vkGetPhysicalDeviceMultisamplePropertiesEXT, (VkPhysicalDevice)&physicalDeviceObject->id, samples, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_PHYSICAL_DEVICE_MULTISAMPLE_PROPERTIES_EXT);
     VT_RECV_CHECKED();
@@ -2293,11 +2293,11 @@ void vt_call_vkGetPhysicalDeviceMultisamplePropertiesEXT(VkPhysicalDevice physic
 void vt_call_vkGetBufferMemoryRequirements2(VkDevice device, const VkBufferMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetBufferMemoryRequirements2, (VkDevice)&deviceObject->id, pInfo, pMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_BUFFER_MEMORY_REQUIREMENTS2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements2(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2305,11 +2305,11 @@ void vt_call_vkGetBufferMemoryRequirements2(VkDevice device, const VkBufferMemor
 void vt_call_vkGetImageMemoryRequirements2(VkDevice device, const VkImageMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetImageMemoryRequirements2, (VkDevice)&deviceObject->id, pInfo, pMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_IMAGE_MEMORY_REQUIREMENTS2);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements2(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2318,7 +2318,7 @@ void vt_call_vkGetImageSparseMemoryRequirements2(VkDevice device, const VkImageS
     VT_CALL_LOCK();
     if (!pSparseMemoryRequirements) *pSparseMemoryRequirementCount = 0;
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetImageSparseMemoryRequirements2, (VkDevice)&deviceObject->id, pInfo, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_IMAGE_SPARSE_MEMORY_REQUIREMENTS2);
     VT_RECV_CHECKED();
@@ -2330,11 +2330,11 @@ void vt_call_vkGetImageSparseMemoryRequirements2(VkDevice device, const VkImageS
 void vt_call_vkGetDeviceBufferMemoryRequirements(VkDevice device, const VkDeviceBufferMemoryRequirements* pInfo, VkMemoryRequirements2* pMemoryRequirements) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceBufferMemoryRequirements, (VkDevice)&deviceObject->id, pInfo, pMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_BUFFER_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements2(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2342,11 +2342,11 @@ void vt_call_vkGetDeviceBufferMemoryRequirements(VkDevice device, const VkDevice
 void vt_call_vkGetDeviceImageMemoryRequirements(VkDevice device, const VkDeviceImageMemoryRequirements* pInfo, VkMemoryRequirements2* pMemoryRequirements) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceImageMemoryRequirements, (VkDevice)&deviceObject->id, pInfo, pMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_IMAGE_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkMemoryRequirements2(pMemoryRequirements, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2355,7 +2355,7 @@ void vt_call_vkGetDeviceImageSparseMemoryRequirements(VkDevice device, const VkD
     VT_CALL_LOCK();
     if (!pSparseMemoryRequirements) *pSparseMemoryRequirementCount = 0;
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceImageSparseMemoryRequirements, (VkDevice)&deviceObject->id, pInfo, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_IMAGE_SPARSE_MEMORY_REQUIREMENTS);
     VT_RECV_CHECKED();
@@ -2396,27 +2396,27 @@ void vt_call_vkDestroySamplerYcbcrConversion(VkDevice device, VkSamplerYcbcrConv
 void vt_call_vkGetDeviceQueue2(VkDevice device, const VkDeviceQueueInfo2* pQueueInfo, VkQueue* pQueue) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceQueue2, (VkDevice)&deviceObject->id, pQueueInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_QUEUE2);
     VT_RECV_CHECKED();
-    
+
     uint64_t queueId;
     vt_unserialize_VkQueue((VkQueue)&queueId, inputBuffer, &globalMemoryPool);
     VkObject* queueObject = VkObject_create(VK_OBJECT_TYPE_QUEUE, queueId);
     *pQueue = VkObject_toHandle(queueObject);
-       
+
     VT_CALL_UNLOCK();
 }
 
 void vt_call_vkGetDescriptorSetLayoutSupport(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayoutSupport* pSupport) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDescriptorSetLayoutSupport, (VkDevice)&deviceObject->id, pCreateInfo, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DESCRIPTOR_SET_LAYOUT_SUPPORT);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkDescriptorSetLayoutSupport(pSupport, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -2494,7 +2494,7 @@ VkResult vt_call_vkGetSemaphoreCounterValue(VkDevice device, VkSemaphore semapho
     VT_SERIALIZE_CMD(vkGetSemaphoreCounterValue, (VkDevice)&deviceObject->id, (VkSemaphore)&semaphoreObject->id, NULL);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_SEMAPHORE_COUNTER_VALUE, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     *pValue = *(uint64_t*)(inputBuffer);
     VT_CALL_UNLOCK();
     return (VkResult)result;
@@ -2506,27 +2506,27 @@ VkResult vt_call_vkWaitSemaphores(VkDevice device, const VkSemaphoreWaitInfo* pW
 
     VT_SERIALIZE_CMD(vkWaitSemaphores, (VkDevice)&deviceObject->id, pWaitInfo, timeout);
     VT_SEND_CHECKED(REQUEST_CODE_VK_WAIT_SEMAPHORES, VT_RETURN);
-    
+
     int numFds, fd;
     recv_fds(serverFd, &fd, &numFds, NULL, 0);
     VT_CALL_UNLOCK();
-    
+
     uint64_t value = 0;
     int bytesRead = read(fd, &value, sizeof(uint64_t));
     CLOSEFD(fd);
     if (bytesRead != sizeof(uint64_t)) return VK_ERROR_DEVICE_LOST;
-    
+
     return value == 1 ? VK_SUCCESS : (value == 2 ? VK_ERROR_DEVICE_LOST : VK_ERROR_UNKNOWN);
 }
 
 VkResult vt_call_vkSignalSemaphore(VkDevice device, const VkSemaphoreSignalInfo* pSignalInfo) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkSignalSemaphore, (VkDevice)&deviceObject->id, pSignalInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_SIGNAL_SEMAPHORE, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VT_CALL_UNLOCK();
     return (VkResult)result;
 }
@@ -2597,11 +2597,11 @@ void vt_call_vkCmdDrawIndirectByteCountEXT(VkCommandBuffer commandBuffer, uint32
 uint64_t vt_call_vkGetBufferOpaqueCaptureAddress(VkDevice device, const VkBufferDeviceAddressInfo* pInfo) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetBufferOpaqueCaptureAddress, (VkDevice)&deviceObject->id, pInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_BUFFER_OPAQUE_CAPTURE_ADDRESS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     uint64_t value = *(uint64_t*)(inputBuffer);
     VT_CALL_UNLOCK();
     return value;
@@ -2610,11 +2610,11 @@ uint64_t vt_call_vkGetBufferOpaqueCaptureAddress(VkDevice device, const VkBuffer
 VkDeviceAddress vt_call_vkGetBufferDeviceAddress(VkDevice device, const VkBufferDeviceAddressInfo* pInfo) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetBufferDeviceAddress, (VkDevice)&deviceObject->id, pInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_BUFFER_DEVICE_ADDRESS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     VkDeviceAddress value = *(VkDeviceAddress*)(inputBuffer);
     VT_CALL_UNLOCK();
     return value;
@@ -2623,11 +2623,11 @@ VkDeviceAddress vt_call_vkGetBufferDeviceAddress(VkDevice device, const VkBuffer
 uint64_t vt_call_vkGetDeviceMemoryOpaqueCaptureAddress(VkDevice device, const VkDeviceMemoryOpaqueCaptureAddressInfo* pInfo) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetDeviceMemoryOpaqueCaptureAddress, (VkDevice)&deviceObject->id, pInfo);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS, VT_RETURN);
     VT_RECV_CHECKED(VT_RETURN);
-    
+
     uint64_t value = *(uint64_t*)(inputBuffer);
     VT_CALL_UNLOCK();
     return value;
@@ -2899,7 +2899,7 @@ void vt_call_vkCmdSetDepthClipNegativeOneToOneEXT(VkCommandBuffer commandBuffer,
 
 VkResult vt_call_vkCreatePrivateDataSlot(VkDevice device, const VkPrivateDataSlotCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPrivateDataSlot* pPrivateDataSlot) {
     VT_CALL_LOCK();
-    ArrayList* dataList = calloc(1, sizeof(ArrayList)); 
+    ArrayList* dataList = calloc(1, sizeof(ArrayList));
     VkObject* privateDataSlotObject = VkObject_create(VK_OBJECT_TYPE_PRIVATE_DATA_SLOT, (uint64_t)dataList);
     privateDataSlotObject->tag = dataList;
     *pPrivateDataSlot = VkObject_toHandle(privateDataSlotObject);
@@ -2912,7 +2912,7 @@ void vt_call_vkDestroyPrivateDataSlot(VkDevice device, VkPrivateDataSlot private
     VT_CALL_LOCK();
     VkObject* privateDataSlotObject = VkObject_fromHandle(privateDataSlot);
     ArrayList* dataList = privateDataSlotObject->tag;
-    
+
     ArrayList_free(dataList, true);
     VkObject_free(privateDataSlotObject);
     VT_CALL_UNLOCK();
@@ -2922,7 +2922,7 @@ VkResult vt_call_vkSetPrivateData(VkDevice device, VkObjectType objectType, uint
     VT_CALL_LOCK();
     VkObject* privateDataSlotObject = VkObject_fromHandle(privateDataSlot);
     ArrayList* dataList = privateDataSlotObject->tag;
-    
+
     uint64_t* slot = NULL;
     for (int i = 0; i < dataList->size; i++) {
         if (((uint64_t*)dataList->elements[i])[0] == objectHandle) {
@@ -2930,15 +2930,15 @@ VkResult vt_call_vkSetPrivateData(VkDevice device, VkObjectType objectType, uint
             break;
         }
     }
-    
+
     if (!slot) {
         slot = malloc(2 * sizeof(uint64_t));
         ArrayList_add(dataList, slot);
     }
-    
+
     slot[0] = objectHandle;
     slot[1] = data;
-    
+
     VT_CALL_UNLOCK();
     return VK_SUCCESS;
 }
@@ -2947,7 +2947,7 @@ void vt_call_vkGetPrivateData(VkDevice device, VkObjectType objectType, uint64_t
     VT_CALL_LOCK();
     VkObject* privateDataSlotObject = VkObject_fromHandle(privateDataSlot);
     ArrayList* dataList = privateDataSlotObject->tag;
-    
+
     *pData = 0;
     for (int i = 0; i < dataList->size; i++) {
         if (((uint64_t*)dataList->elements[i])[0] == objectHandle) {
@@ -2955,7 +2955,7 @@ void vt_call_vkGetPrivateData(VkDevice device, VkObjectType objectType, uint64_t
             break;
         }
     }
-    
+
     VT_CALL_UNLOCK();
 }
 
@@ -3042,12 +3042,12 @@ VkResult vt_call_vkQueueSubmit2(VkQueue queue, uint32_t submitCount, const VkSub
     VT_CALL_LOCK();
     VkObject* queueObject = VkObject_fromHandle(queue);
     VkObject* fenceObject = VkObject_fromHandle(fence);
-    
+
     bool shouldWait = RingBuffer_hasStatus(clientRing, RING_STATUS_WAIT);
-    
+
     VT_SERIALIZE_CMD(vkQueueSubmit2, (VkQueue)&queueObject->id, submitCount, pSubmits, (VkFence)&fenceObject->id);
     VT_SEND_CHECKED(REQUEST_CODE_VK_QUEUE_SUBMIT2, VT_RETURN);
-    
+
     if (shouldWait) {
         VT_RECV_CHECKED(VT_RETURN);
         VT_CALL_UNLOCK();
@@ -3085,11 +3085,11 @@ void vt_call_vkGetShaderModuleIdentifierEXT(VkDevice device, VkShaderModule shad
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
     VkObject* shaderModuleObject = VkObject_fromHandle(shaderModule);
-    
+
     VT_SERIALIZE_CMD(vkGetShaderModuleIdentifierEXT, (VkDevice)&deviceObject->id, (VkShaderModule)&shaderModuleObject->id, pIdentifier);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_SHADER_MODULE_IDENTIFIER_EXT);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkShaderModuleIdentifierEXT(pIdentifier, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }
@@ -3097,11 +3097,11 @@ void vt_call_vkGetShaderModuleIdentifierEXT(VkDevice device, VkShaderModule shad
 void vt_call_vkGetShaderModuleCreateInfoIdentifierEXT(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModuleIdentifierEXT* pIdentifier) {
     VT_CALL_LOCK();
     VkObject* deviceObject = VkObject_fromHandle(device);
-    
+
     VT_SERIALIZE_CMD(vkGetShaderModuleCreateInfoIdentifierEXT, (VkDevice)&deviceObject->id, pCreateInfo, pIdentifier);
     VT_SEND_CHECKED(REQUEST_CODE_VK_GET_SHADER_MODULE_CREATE_INFO_IDENTIFIER_EXT);
     VT_RECV_CHECKED();
-    
+
     vt_unserialize_VkShaderModuleIdentifierEXT(pIdentifier, inputBuffer, &globalMemoryPool);
     VT_CALL_UNLOCK();
 }

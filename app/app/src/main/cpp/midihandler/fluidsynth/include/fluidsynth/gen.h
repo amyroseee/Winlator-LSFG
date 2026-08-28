@@ -131,4 +131,3 @@ enum fluid_gen_type
 }
 #endif
 #endif /* _FLUIDSYNTH_GEN_H */
-

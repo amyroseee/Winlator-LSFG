@@ -42,7 +42,7 @@ extern "C" {
 /**
  * \brief initialize event record
  * \param ev event record pointer
- * 
+ *
  * This macro clears the given event record pointer to the default status.
  */
 static inline void snd_seq_ev_clear(snd_seq_event_t *ev)
@@ -124,7 +124,7 @@ static inline void snd_seq_ump_ev_clear(snd_seq_ump_event_t *ev)
  *
  * This macro sets the event to the direct passing mode
  * to be delivered immediately without queueing.
- * 
+ *
  * \sa snd_seq_ev_schedule_tick(), snd_seq_ev_schedule_real()
  */
 #define snd_seq_ev_set_direct(ev) \
@@ -534,4 +534,3 @@ int snd_seq_create_ump_block(snd_seq_t *seq, int blkid,
 #endif
 
 #endif /* __ALSA_SEQMID_H */
-

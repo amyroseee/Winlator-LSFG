@@ -125,7 +125,16 @@ public abstract class GeneralComponents {
                 items = new String[]{DefaultVersion.BOX64};
                 break;
             case TURNIP:
-                items = new String[]{DefaultVersion.TURNIP};
+                items = new String[]{
+                        DefaultVersion.TURNIP_BATCH_01_24_3,
+                        DefaultVersion.TURNIP_EXPERIMENTAL,
+                        DefaultVersion.TURNIP_BATCH_01_25_0,
+                        DefaultVersion.TURNIP_BATCH_01_25_1,
+                        DefaultVersion.TURNIP_BATCH_01_25_3,
+                        DefaultVersion.TURNIP_BATCH_01_26_1,
+                        DefaultVersion.TURNIP_BATCH_01_26_2,
+                        DefaultVersion.TURNIP
+                };
                 break;
             case DXVK:
                 items = new String[]{DefaultVersion.MINOR_DXVK, DefaultVersion.MAJOR_DXVK};
@@ -238,6 +247,25 @@ public abstract class GeneralComponents {
             }
             else AppUtils.showToast(activity, R.string.a_network_error_occurred);
         });
+    }
+
+    /** Online configs may request only an item advertised by the existing catalog. */
+    public static void downloadKnownComponent(final Activity activity, final Type type, final String identifier, final Callback<Boolean> callback) {
+        if (type == Type.WINED3D || type == Type.SOUNDFONT || type == Type.ADRENOTOOLS_DRIVER ||
+                isBuiltinComponent(type, identifier) || identifier == null || !identifier.matches("[A-Za-z0-9._+-]{1,80}")) {
+            callback.call(isBuiltinComponent(type, identifier));
+            return;
+        }
+        HttpUtils.download(String.format(INSTALLABLE_COMPONENTS_URL, type.lowerName()+"/index.txt"), list -> activity.runOnUiThread(() -> {
+            if (list == null) { callback.call(false); return; }
+            String filename = type.lowerName()+"-"+identifier+".tzst";
+            boolean advertised = false;
+            for (String line : list.split("\\n")) if (line.trim().equals(filename)) { advertised = true; break; }
+            if (!advertised) { callback.call(false); return; }
+            File destination = new File(getComponentDir(type, activity), filename);
+            if (destination.isFile()) destination.delete();
+            HttpUtils.download(activity, String.format(INSTALLABLE_COMPONENTS_URL, type.lowerName()+"/"+filename), destination, callback);
+        }));
     }
 
     private static void installFromPackagedFile(Context context, TarCompressorUtils.Type compressedType, final Type type, File originFile, String identifier, JSONArray filesJSONArray) throws JSONException {

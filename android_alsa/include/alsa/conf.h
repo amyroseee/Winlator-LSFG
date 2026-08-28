@@ -103,7 +103,7 @@ void snd_config_unref(snd_config_t *top);
 
 int snd_config_search(snd_config_t *config, const char *key,
 		      snd_config_t **result);
-int snd_config_searchv(snd_config_t *config, 
+int snd_config_searchv(snd_config_t *config,
 		       snd_config_t **result, ...);
 int snd_config_search_definition(snd_config_t *config,
 				 const char *base, const char *key,
@@ -117,7 +117,7 @@ int snd_config_search_definition(snd_config_t *config,
  * \param[in] private_data Handle to the \c private_data node.
  * \return A non-negative value if successful, otherwise a negative error code.
  *
- * Use a function of this type to define a custom expansion 
+ * Use a function of this type to define a custom expansion
  */
 typedef int (*snd_config_expand_fcn_t)(snd_config_t **dst, const char *s, void *private_data);
 

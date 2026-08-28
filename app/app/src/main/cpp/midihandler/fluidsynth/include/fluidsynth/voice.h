@@ -74,4 +74,3 @@ FLUIDSYNTH_API void fluid_voice_update_param(fluid_voice_t *voice, int gen);
 }
 #endif
 #endif /* _FLUIDSYNTH_VOICE_H */
-

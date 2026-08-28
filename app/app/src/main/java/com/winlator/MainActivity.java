@@ -31,6 +31,7 @@ import com.winlator.core.Callback;
 import com.winlator.core.LocaleHelper;
 import com.winlator.core.PreloaderDialog;
 import com.winlator.xenvironment.RootFSInstaller;
+import com.winlator.onlineconfig.OnlineConfigsFragment;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     public static final boolean DEBUG_MODE = false; // FIXME change to false
@@ -135,6 +136,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             else if (currentFragment instanceof ContainersFragment) {
                 finish();
             }
+            else if (currentFragment instanceof OnlineConfigsFragment) {
+                if (((OnlineConfigsFragment)currentFragment).onNavigateUp()) return;
+                showFragment(new ShortcutsFragment());
+                return;
+            }
         }
 
         showFragment(new ContainersFragment());
@@ -156,10 +162,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onOptionsItemSelected(MenuItem menuItem) {
         int itemId = menuItem.getItemId();
+        if (itemId == R.id.menu_item_online_configs && currentFragment instanceof ShortcutsFragment) {
+            showFragment(new OnlineConfigsFragment());
+            return true;
+        }
         if (itemId == R.id.menu_item_add ||
             itemId == R.id.menu_item_home ||
             itemId == R.id.menu_item_view_style ||
-            itemId == R.id.menu_item_new_folder) {
+            itemId == R.id.menu_item_new_folder ||
+            itemId == R.id.menu_item_online_configs) {
             return super.onOptionsItemSelected(menuItem);
         }
         else {
@@ -176,6 +187,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
             return true;
         }
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        if (currentFragment instanceof OnlineConfigsFragment) {
+            if (!((OnlineConfigsFragment)currentFragment).onNavigateUp()) showFragment(new ShortcutsFragment());
+            return true;
+        }
+        return super.onSupportNavigateUp();
     }
 
     @Override

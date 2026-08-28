@@ -62,7 +62,7 @@ public class ContainerFileManagerFragment extends BaseFileManagerFragment<FileIn
 
         container = manager.getContainerById(containerId);
         viewStyle = ViewStyle.valueOf(preferences.getString("container_file_manager_view_style", "GRID"));
-        
+
         if (startPath != null) {
             setCurrentWorkingPath(WineUtils.unixToDOSPath(startPath, container));
             startPath = null;

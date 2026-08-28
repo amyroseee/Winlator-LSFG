@@ -11,7 +11,7 @@ static inline boolean util_blend_factor_is_dual_src(int factor)
           (factor == PIPE_BLENDFACTOR_INV_SRC1_ALPHA);
 }
 
-static inline boolean util_blend_state_is_dual(const struct pipe_blend_state *blend, 
+static inline boolean util_blend_state_is_dual(const struct pipe_blend_state *blend,
 				  int index)
 {
    if (util_blend_factor_is_dual_src(blend->rt[index].rgb_src_factor) ||

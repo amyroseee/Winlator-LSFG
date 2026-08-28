@@ -147,7 +147,7 @@ def write_format_table(formats):
         print("   %s," % (colorspace_map(format.colorspace),))
         print("};")
         print()
-        
+
     print("const struct util_format_description *")
     print("util_format_description(enum pipe_format format)")
     print("{")

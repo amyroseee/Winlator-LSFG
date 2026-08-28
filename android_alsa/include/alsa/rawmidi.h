@@ -179,4 +179,3 @@ snd_rawmidi_stream_t snd_rawmidi_stream(snd_rawmidi_t *rawmidi);
 #endif
 
 #endif /* __RAWMIDI_H */
-

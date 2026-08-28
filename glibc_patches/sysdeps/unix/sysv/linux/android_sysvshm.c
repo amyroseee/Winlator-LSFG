@@ -21,29 +21,29 @@ int find_shmemory_index(int shmid) {
 void sysvshm_connect(void) {
     if (sysvshm_server_fd >= 0) return;
     char* path = getenv("ANDROID_SYSVSHM_SERVER");
-    
+
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return;
-    
+
     struct sockaddr_un server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sun_family = AF_LOCAL;
-    
+
     strncpy(server_addr.sun_path, path, sizeof(server_addr.sun_path) - 1);
-    
+
     int res;
     do {
         res = 0;
         if (connect(fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_un)) < 0) res = -errno;
-    } 
-    while (res == -EINTR);        
-    
+    }
+    while (res == -EINTR);
+
     if (res < 0) {
         close(fd);
         return;
     }
 
-    sysvshm_server_fd = fd;    
+    sysvshm_server_fd = fd;
 }
 
 void sysvshm_close(void) {
@@ -55,14 +55,14 @@ void sysvshm_close(void) {
 
 int sysvshm_shmget_request(size_t size) {
     if (sysvshm_server_fd < 0) return 0;
-    
+
     char request_data[MIN_REQUEST_LENGTH];
     request_data[0] = REQUEST_CODE_SHMGET;
     *(int*)(request_data + 1) = size;
-    
+
     int res = write(sysvshm_server_fd, request_data, sizeof(request_data));
     if (res < 0) return 0;
-    
+
     int shmid;
     res = read(sysvshm_server_fd, &shmid, 4);
     return res == 4 ? shmid : 0;
@@ -70,14 +70,14 @@ int sysvshm_shmget_request(size_t size) {
 
 int sysvshm_get_fd_request(int shmid) {
     if (sysvshm_server_fd < 0) return 0;
-    
+
     char request_data[MIN_REQUEST_LENGTH];
     request_data[0] = REQUEST_CODE_GET_FD;
     *(int*)(request_data + 1) = shmid;
-    
+
     int res = write(sysvshm_server_fd, request_data, sizeof(request_data));
     if (res < 0) return -1;
-    
+
     char zero = 0;
     struct iovec iovmsg = {.iov_base = &zero, .iov_len = 1};
     struct {
@@ -107,11 +107,11 @@ int sysvshm_get_fd_request(int shmid) {
 
 bool sysvshm_delete_request(int shmid) {
     if (sysvshm_server_fd < 0) return false;
-    
+
     char request_data[MIN_REQUEST_LENGTH];
     request_data[0] = REQUEST_CODE_DELETE;
     *(int*)(request_data + 1) = shmid;
-    
+
     int res = write(sysvshm_server_fd, request_data, sizeof(request_data));
     return res > 0 ? true : false;
 }

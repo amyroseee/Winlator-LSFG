@@ -27,7 +27,7 @@
 /**
  * @file
  * Surface utility functions.
- *  
+ *
  * @author Brian Paul
  */
 

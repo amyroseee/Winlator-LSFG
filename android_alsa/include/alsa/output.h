@@ -86,4 +86,3 @@ int snd_output_flush(snd_output_t *output);
 #endif
 
 #endif /* __ALSA_OUTPUT_H */
-

@@ -127,17 +127,17 @@ bool setupRingBuffers(GLContext* context) {
     int numFds;
     recv_fds(serverFd, shmFds, &numFds, NULL, 0);
     if (numFds != 2) goto error;
-    
+
     context->serverRing = RingBuffer_create(shmFds[0], SERVER_RING_BUFFER_SIZE);
     if (!context->serverRing) goto error;
-    
+
     context->clientRing = RingBuffer_create(shmFds[1], CLIENT_RING_BUFFER_SIZE);
     if (!context->clientRing) goto error;
-    
+
     CLOSEFD(shmFds[0]);
     CLOSEFD(shmFds[1]);
     return true;
-    
+
 error:
     if (context->serverRing) {
         RingBuffer_free(context->serverRing);
@@ -148,7 +148,7 @@ error:
         context->clientRing = NULL;
     }
     CLOSEFD(shmFds[0]);
-    CLOSEFD(shmFds[1]);    
+    CLOSEFD(shmFds[1]);
     return false;
 }
 
@@ -166,8 +166,8 @@ static int gladioServerConnect() {
     do {
         res = 0;
         if (connect(fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_un)) < 0) res = -errno;
-    } 
-    while (res == -EINTR);    
+    }
+    while (res == -EINTR);
 
     if (res < 0) {
         close(fd);
@@ -180,31 +180,31 @@ static int gladioServerConnect() {
 static bool sendX11AuthRequest() {
     char requestData[12] = {0};
     *(short*)(requestData + 2) = 11;
-    
+
     int result;
     result = sock_write(serverFd, requestData, 12);
     if (result != 12) return false;
-    
+
     char replyData[8] = {0};
     result = sock_read(serverFd, replyData, 8);
     if (result != 8) return false;
-    
+
     int additionalDataLength = *(short*)(replyData + 6) * 4;
     char additionalData[additionalDataLength];
     result = sock_read(serverFd, additionalData, additionalDataLength);
     if (result != additionalDataLength) return false;
-    
+
     return true;
 }
 
 bool gladioInitOnce() {
     if (serverFd == -1) {
         serverFd = gladioServerConnect();
-        
+
         if (!sendX11AuthRequest()) {
             CLOSEFD(serverFd);
             return false;
         }
     }
-    return serverFd > 0;    
+    return serverFd > 0;
 }

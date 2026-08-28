@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <EditText style="@style/EditText" android:id="@+id/ETOnlineSearch" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="@string/search" android:singleLine="true" android:inputType="text" />
+        <ImageButton style="@style/ListMenuButton" android:id="@+id/BTOnlineRefresh" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/icon_action_bar_refresh" android:contentDescription="@string/refresh" />
+    </LinearLayout>
+    <TextView android:id="@+id/TVOnlineStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="8dp" android:textColor="?attr/colorSecondaryText" />
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/RVOnlineConfigs" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scrollbars="vertical" />
+    <TextView android:id="@+id/TVOnlineEmpty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="@string/no_online_configs" android:textSize="20sp" android:visibility="gone" />
+</LinearLayout>

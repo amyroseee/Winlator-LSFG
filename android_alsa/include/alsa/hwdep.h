@@ -169,4 +169,3 @@ void snd_hwdep_dsp_image_set_length(snd_hwdep_dsp_image_t *obj, size_t length);
 #endif
 
 #endif /* __ALSA_HWDEP_H */
-

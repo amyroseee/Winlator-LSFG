@@ -155,7 +155,7 @@ static void cso_data_rehash(struct cso_hash_data *hash, int hint)
             struct cso_node *lastNode = firstNode;
             struct cso_node *afterLastNode;
             struct cso_node **beforeFirstNode;
-            
+
             while (lastNode->next != e && lastNode->next->key == h)
                lastNode = lastNode->next;
 

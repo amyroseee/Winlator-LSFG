@@ -8,6 +8,6 @@ Description:
 URL:
 Version: 1.0.0
 Libs: -L${libdir} -ladrenotools
-Libs.private:          
+Libs.private:
 Requires.private:
 Cflags: -I${includedir}

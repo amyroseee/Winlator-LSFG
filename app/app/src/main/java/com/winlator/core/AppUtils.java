@@ -26,6 +26,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -210,6 +211,7 @@ public abstract class AppUtils {
     }
 
     public static void showHelpBox(Context context, View anchor, String text) {
+        if (text == null || text.isEmpty()) return;
         int padding = (int)UnitUtils.dpToPx(8);
         TextView textView = new TextView(context);
         textView.setLayoutParams(new ViewGroup.LayoutParams((int)UnitUtils.dpToPx(284), ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -219,7 +221,12 @@ public abstract class AppUtils {
         int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         textView.measure(widthMeasureSpec, heightMeasureSpec);
-        showPopupWindow(anchor, textView, 300, textView.getMeasuredHeight());
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setFillViewport(true);
+        scrollView.addView(textView);
+        int maxHeight = (int)UnitUtils.dpToPx(320);
+        int popupHeight = Math.min(Math.max(textView.getMeasuredHeight(), (int)UnitUtils.dpToPx(48)), maxHeight);
+        showPopupWindow(anchor, scrollView, 300, popupHeight);
     }
 
     public static int getVersionCode(Context context) {
@@ -385,4 +392,5 @@ public abstract class AppUtils {
             activity.setTheme(R.style.AppThemeDark);
         }
     }
+
 }

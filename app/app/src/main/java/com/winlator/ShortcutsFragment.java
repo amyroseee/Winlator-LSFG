@@ -26,6 +26,7 @@ import com.winlator.contentdialog.CreateFolderDialog;
 import com.winlator.contentdialog.ShortcutSettingsDialog;
 import com.winlator.core.AppUtils;
 import com.winlator.core.ArrayUtils;
+import com.winlator.onlineconfig.OnlineConfigBrowserDialog;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -108,6 +109,10 @@ public class ShortcutsFragment extends BaseFileManagerFragment<Shortcut> {
         }
         else if (itemId == R.id.menu_item_new_folder) {
             createFolder();
+            return true;
+        }
+        else if (itemId == R.id.menu_item_online_configs) {
+            ((MainActivity)getActivity()).showFragment(new com.winlator.onlineconfig.OnlineConfigsFragment());
             return true;
         }
         else return super.onOptionsItemSelected(menuItem);
@@ -195,6 +200,9 @@ public class ShortcutsFragment extends BaseFileManagerFragment<Shortcut> {
                     case R.id.menu_item_settings:
                         clearClipboard();
                         (new ShortcutSettingsDialog(ShortcutsFragment.this, shortcut)).show();
+                        break;
+                    case R.id.menu_item_publish_config:
+                        OnlineConfigBrowserDialog.publish((AppCompatActivity)getActivity(), shortcut);
                         break;
                     case R.id.menu_item_copy:
                     case R.id.menu_item_cut:

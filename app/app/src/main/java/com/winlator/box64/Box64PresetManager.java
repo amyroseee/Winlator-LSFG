@@ -30,6 +30,7 @@ public abstract class Box64PresetManager {
             envVars.put("BOX64_DYNAREC_WAIT", "0");
             envVars.put("BOX64_DYNAREC_NATIVEFLAGS", "0");
             envVars.put("BOX64_DYNAREC_WEAKBARRIER", "0");
+            putNewDefaults(envVars);
         }
         else if (id.equals(Box64Preset.CONSERVATIVE)) {
             envVars.put("BOX64_DYNAREC_SAFEFLAGS", "2");
@@ -43,6 +44,7 @@ public abstract class Box64PresetManager {
             envVars.put("BOX64_DYNAREC_WAIT", "1");
             envVars.put("BOX64_DYNAREC_NATIVEFLAGS", "0");
             envVars.put("BOX64_DYNAREC_WEAKBARRIER", "1");
+            putNewDefaults(envVars);
         }
         else if (id.equals(Box64Preset.INTERMEDIATE)) {
             envVars.put("BOX64_DYNAREC_SAFEFLAGS", "2");
@@ -56,6 +58,7 @@ public abstract class Box64PresetManager {
             envVars.put("BOX64_DYNAREC_WAIT", "1");
             envVars.put("BOX64_DYNAREC_NATIVEFLAGS", "0");
             envVars.put("BOX64_DYNAREC_WEAKBARRIER", "2");
+            putNewDefaults(envVars);
         }
         else if (id.equals(Box64Preset.PERFORMANCE)) {
             envVars.put("BOX64_DYNAREC_SAFEFLAGS", "1");
@@ -69,6 +72,41 @@ public abstract class Box64PresetManager {
             envVars.put("BOX64_DYNAREC_WAIT", "1");
             envVars.put("BOX64_DYNAREC_NATIVEFLAGS", "1");
             envVars.put("BOX64_DYNAREC_WEAKBARRIER", "2");
+            envVars.put("BOX64_DYNAREC_ALIGNED_ATOMICS", "0");
+            envVars.put("BOX64_DYNAREC_DF", "1");
+            envVars.put("BOX64_DYNAREC_DIRTY", "0");
+            envVars.put("BOX64_DYNAREC_PAUSE", "1");
+            envVars.put("BOX64_DYNAREC_DIV0", "0");
+            envVars.put("BOX64_DYNAREC_TBB", "1");
+            envVars.put("BOX64_DYNAREC_SEP", "2");
+            envVars.put("BOX64_DYNAREC_NOHOTPAGE", "0");
+            envVars.put("BOX64_DYNAREC_VOLATILE_METADATA", "1");
+            envVars.put("BOX64_UNITYPLAYER", "0");
+            envVars.put("BOX64_UNITY", "0");
+        }
+        else if (id.equals(Box64Preset.UNITY)) {
+            envVars.put("BOX64_DYNAREC_SAFEFLAGS", "2");
+            envVars.put("BOX64_DYNAREC_FASTNAN", "0");
+            envVars.put("BOX64_DYNAREC_FASTROUND", "0");
+            envVars.put("BOX64_DYNAREC_X87DOUBLE", "1");
+            envVars.put("BOX64_DYNAREC_BIGBLOCK", "0");
+            envVars.put("BOX64_DYNAREC_STRONGMEM", "1");
+            envVars.put("BOX64_DYNAREC_FORWARD", "128");
+            envVars.put("BOX64_DYNAREC_CALLRET", "0");
+            envVars.put("BOX64_DYNAREC_WAIT", "0");
+            envVars.put("BOX64_DYNAREC_NATIVEFLAGS", "0");
+            envVars.put("BOX64_DYNAREC_WEAKBARRIER", "0");
+            envVars.put("BOX64_DYNAREC_ALIGNED_ATOMICS", "0");
+            envVars.put("BOX64_DYNAREC_DF", "1");
+            envVars.put("BOX64_DYNAREC_DIRTY", "0");
+            envVars.put("BOX64_DYNAREC_PAUSE", "1");
+            envVars.put("BOX64_DYNAREC_DIV0", "1");
+            envVars.put("BOX64_DYNAREC_TBB", "1");
+            envVars.put("BOX64_DYNAREC_SEP", "0");
+            envVars.put("BOX64_DYNAREC_NOHOTPAGE", "0");
+            envVars.put("BOX64_DYNAREC_VOLATILE_METADATA", "1");
+            envVars.put("BOX64_UNITYPLAYER", "0");
+            envVars.put("BOX64_UNITY", "1");
         }
         else if (id.startsWith(Box64Preset.CUSTOM)) {
             for (String[] preset : customPresetsIterator(context)) {
@@ -88,8 +126,23 @@ public abstract class Box64PresetManager {
         presets.add(new Box64Preset(Box64Preset.CONSERVATIVE, context.getString(R.string.conservative)));
         presets.add(new Box64Preset(Box64Preset.INTERMEDIATE, context.getString(R.string.intermediate)));
         presets.add(new Box64Preset(Box64Preset.PERFORMANCE, context.getString(R.string.performance)));
+        presets.add(new Box64Preset(Box64Preset.UNITY, context.getString(R.string.unity_preset)));
         for (String[] preset : customPresetsIterator(context)) presets.add(new Box64Preset(preset[0], preset[1]));
         return presets;
+    }
+
+    private static void putNewDefaults(EnvVars envVars) {
+        envVars.put("BOX64_DYNAREC_ALIGNED_ATOMICS", "0");
+        envVars.put("BOX64_DYNAREC_DF", "1");
+        envVars.put("BOX64_DYNAREC_DIRTY", "0");
+        envVars.put("BOX64_DYNAREC_PAUSE", "0");
+        envVars.put("BOX64_DYNAREC_DIV0", "0");
+        envVars.put("BOX64_DYNAREC_TBB", "1");
+        envVars.put("BOX64_DYNAREC_SEP", "0");
+        envVars.put("BOX64_DYNAREC_NOHOTPAGE", "0");
+        envVars.put("BOX64_DYNAREC_VOLATILE_METADATA", "1");
+        envVars.put("BOX64_UNITYPLAYER", "0");
+        envVars.put("BOX64_UNITY", "0");
     }
 
     public static Box64Preset getPreset(Context context, String id) {

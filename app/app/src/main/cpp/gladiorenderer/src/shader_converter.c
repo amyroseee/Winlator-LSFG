@@ -1771,7 +1771,7 @@ static void linkShaderProgram(ShaderProgram* program) {
             sprintf(uniformName, "gd_TextureMatrix[%d]", i);
             program->location.textureMatrix[i] = glGetUniformLocation(program->id, uniformName);
         }
-        
+
         ShaderMaterial_getFogUniformLocations(program->id, program->location.fog);
     }
 

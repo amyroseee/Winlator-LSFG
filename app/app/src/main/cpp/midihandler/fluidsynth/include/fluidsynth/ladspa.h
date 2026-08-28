@@ -66,4 +66,3 @@ FLUIDSYNTH_API int fluid_ladspa_effect_link(fluid_ladspa_fx_t *fx, const char *e
 #endif
 
 #endif /* _FLUIDSYNTH_LADSPA_H */
-

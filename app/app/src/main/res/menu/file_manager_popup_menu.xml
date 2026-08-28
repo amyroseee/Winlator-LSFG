@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/menu_item_settings" android:title="@string/settings" android:icon="@drawable/icon_popup_menu_settings" android:iconTint="?attr/colorAccent" />
+    <item android:id="@+id/menu_item_publish_config" android:title="@string/publish_config" android:icon="@drawable/icon_popup_menu_info" android:iconTint="?attr/colorAccent" />
     <item android:id="@+id/menu_item_copy" android:title="@string/copy" android:icon="@drawable/icon_popup_menu_copy" android:iconTint="?attr/colorAccent" />
     <item android:id="@+id/menu_item_cut" android:title="@string/cut" android:icon="@drawable/icon_popup_menu_cut" android:iconTint="?attr/colorAccent" />
     <item android:id="@+id/menu_item_remove" android:title="@string/remove" android:icon="@drawable/icon_popup_menu_remove" android:iconTint="?attr/colorAccent" />

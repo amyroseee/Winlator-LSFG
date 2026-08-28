@@ -204,7 +204,7 @@ cso_find_state(struct cso_cache *sc,
 
 
 void *cso_hash_find_data_from_template( struct cso_hash *hash,
-				        unsigned hash_key, 
+				        unsigned hash_key,
 				        void *templ,
 				        int size )
 {
@@ -319,4 +319,3 @@ void cso_cache_set_sanitize_callback(struct cso_cache *sc,
    sc->sanitize_cb   = cb;
    sc->sanitize_data = user_data;
 }
-

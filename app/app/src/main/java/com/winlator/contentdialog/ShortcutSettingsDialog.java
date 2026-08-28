@@ -16,6 +16,7 @@ import com.winlator.ShortcutsFragment;
 import com.winlator.box64.Box64PresetManager;
 import com.winlator.container.GraphicsDrivers;
 import com.winlator.container.Shortcut;
+import com.winlator.container.ConfigurationSnapshots;
 import com.winlator.core.AppUtils;
 import com.winlator.container.DXWrapperPicker;
 import com.winlator.core.EnvVars;
@@ -65,7 +66,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final String oldGraphicsDriverConfig = shortcut.getExtra("graphicsDriverConfig", shortcut.container.getGraphicsDriverConfig());
         String selectedGraphicsDriver = shortcut.getExtra("graphicsDriver", shortcut.container.getGraphicsDriver());
         GraphicsDriverPicker graphicsDriverPicker = new GraphicsDriverPicker(findViewById(R.id.LLGraphicsDriver), selectedGraphicsDriver, oldGraphicsDriverConfig);
-
         String oldDXWrapperConfig = shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig());
         String selectedDXWrapper = shortcut.getExtra("dxwrapper", shortcut.container.getDXWrapper());
         DXWrapperPicker dxwrapperPicker = new DXWrapperPicker(findViewById(R.id.LLDXWrapper), graphicsDriverPicker, selectedDXWrapper, oldDXWrapperConfig);
@@ -93,8 +93,40 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         ContainerDetailFragment.createWinComponentsTab(getContentView(), shortcut.getExtra("wincomponents", shortcut.container.getWinComponents()));
         final EnvVarsView envVarsView = createEnvVarsTab();
+        final boolean[] saveWorkingRequested = {false};
+        final View restorePrevious = findViewById(R.id.BTRestorePreviousConfiguration);
+        final View saveWorking = findViewById(R.id.BTSaveWorkingConfiguration);
+        final View applyWorking = findViewById(R.id.BTApplyWorkingConfiguration);
+        restorePrevious.setEnabled(!shortcut.getExtra(ConfigurationSnapshots.PREVIOUS).isEmpty());
+        applyWorking.setEnabled(!shortcut.getExtra(ConfigurationSnapshots.WORKING).isEmpty());
+        restorePrevious.setOnClickListener(v -> ContentDialog.confirm(context, R.string.confirm_restore_configuration, () -> {
+            String current = ConfigurationSnapshots.captureShortcut(shortcut);
+            try {
+                ConfigurationSnapshots.applyShortcut(shortcut, shortcut.getExtra(ConfigurationSnapshots.PREVIOUS));
+                shortcut.putExtra(ConfigurationSnapshots.PREVIOUS, current);
+                shortcut.saveData();
+                dismiss();
+                new ShortcutSettingsDialog(fragment, shortcut).show();
+            }
+            catch (Exception ignored) {}
+        }));
+        saveWorking.setOnClickListener(v -> {
+            saveWorkingRequested[0] = true;
+            findViewById(R.id.BTConfirm).performClick();
+        });
+        applyWorking.setOnClickListener(v -> ContentDialog.confirm(context, R.string.confirm_apply_working_configuration, () -> {
+            String current = ConfigurationSnapshots.captureShortcut(shortcut);
+            try {
+                ConfigurationSnapshots.applyShortcut(shortcut, shortcut.getExtra(ConfigurationSnapshots.WORKING));
+                shortcut.putExtra(ConfigurationSnapshots.PREVIOUS, current);
+                shortcut.saveData();
+                dismiss();
+                new ShortcutSettingsDialog(fragment, shortcut).show();
+            }
+            catch (Exception ignored) {}
+        }));
 
-        AppUtils.setupTabLayout(getContentView(), R.id.TabLayout, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabAdvanced);
+        AppUtils.setupTabLayout(getContentView(), R.id.TabLayout, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabRecovery, R.id.LLTabAdvanced);
 
         findViewById(R.id.BTNameMenu).setOnClickListener((v) -> {
             File peFile = null;
@@ -130,6 +162,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
         });
 
         setOnConfirmCallback(() -> {
+            String previous = ConfigurationSnapshots.captureShortcut(shortcut);
             String name = etName.getText().toString().trim();
             String graphicsDriver = graphicsDriverPicker.getGraphicsDriver();
             String dxwrapper = dxwrapperPicker.getDXWrapper();
@@ -165,6 +198,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
             int dinputMapperType = sDInputMapperType.getSelectedItemPosition();
             shortcut.putExtra("dinputMapperType", dinputMapperType != GamepadHandler.DINPUT_MAPPER_TYPE_XINPUT ? String.valueOf(dinputMapperType) : null);
+
+            String current = ConfigurationSnapshots.captureShortcut(shortcut);
+            if (!previous.equals(current)) shortcut.putExtra(ConfigurationSnapshots.PREVIOUS, previous);
+            if (saveWorkingRequested[0]) shortcut.putExtra(ConfigurationSnapshots.WORKING, current);
 
             shortcut.saveData();
             if (!shortcut.name.equals(name) && !name.isEmpty()) renameShortcut(name);

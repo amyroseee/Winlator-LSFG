@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -35,6 +36,7 @@ import com.winlator.box64.Box64Preset;
 import com.winlator.box64.Box64PresetManager;
 import com.winlator.container.Container;
 import com.winlator.container.ContainerManager;
+import com.winlator.container.ConfigurationSnapshots;
 import com.winlator.container.Drive;
 import com.winlator.container.GraphicsDrivers;
 import com.winlator.contentdialog.AddEnvVarDialog;
@@ -140,7 +142,6 @@ public class ContainerDetailFragment extends Fragment {
         final String oldGraphicsDriverConfig = isEditMode() ? container.getGraphicsDriverConfig() : "";
         String selectedGraphicsDriver = isEditMode() ? container.getGraphicsDriver() : GraphicsDrivers.getDefaultDriver(context);
         GraphicsDriverPicker graphicsDriverPicker = new GraphicsDriverPicker(view.findViewById(R.id.LLGraphicsDriver), selectedGraphicsDriver, oldGraphicsDriverConfig);
-
         String oldDXWrapperConfig = isEditMode() ? container.getDXWrapperConfig() : "";
         String selectedDXWrapper = isEditMode() ? container.getDXWrapper() : Container.DEFAULT_DXWRAPPER;
         DXWrapperPicker dxwrapperPicker = new DXWrapperPicker(view.findViewById(R.id.LLDXWrapper), graphicsDriverPicker, selectedDXWrapper, oldDXWrapperConfig);
@@ -187,9 +188,45 @@ public class ContainerDetailFragment extends Fragment {
         createWinComponentsTab(view, isEditMode() ? container.getWinComponents() : Container.DEFAULT_WINCOMPONENTS);
         createDrivesTab(view);
 
+        final boolean[] saveWorkingRequested = {false};
+        Button restorePrevious = view.findViewById(R.id.BTRestorePreviousConfiguration);
+        Button saveWorking = view.findViewById(R.id.BTSaveWorkingConfiguration);
+        Button applyWorking = view.findViewById(R.id.BTApplyWorkingConfiguration);
+        if (isEditMode()) {
+            restorePrevious.setVisibility(View.VISIBLE);
+            saveWorking.setVisibility(View.VISIBLE);
+            applyWorking.setVisibility(View.VISIBLE);
+            restorePrevious.setEnabled(!container.getExtra(ConfigurationSnapshots.PREVIOUS).isEmpty());
+            applyWorking.setEnabled(!container.getExtra(ConfigurationSnapshots.WORKING).isEmpty());
+            restorePrevious.setOnClickListener(v -> ContentDialog.confirm(context, R.string.confirm_restore_configuration, () -> {
+                String current = ConfigurationSnapshots.captureContainer(container);
+                try {
+                    ConfigurationSnapshots.applyContainer(container, container.getExtra(ConfigurationSnapshots.PREVIOUS));
+                    container.putExtra(ConfigurationSnapshots.PREVIOUS, current);
+                    container.saveData();
+                    getParentFragmentManager().beginTransaction().replace(R.id.FLFragmentContainer, new ContainerDetailFragment(container.id)).commit();
+                }
+                catch (JSONException ignored) {}
+            }));
+            saveWorking.setOnClickListener(v -> {
+                saveWorkingRequested[0] = true;
+                view.findViewById(R.id.BTConfirm).performClick();
+            });
+            applyWorking.setOnClickListener(v -> ContentDialog.confirm(context, R.string.confirm_apply_working_configuration, () -> {
+                String current = ConfigurationSnapshots.captureContainer(container);
+                try {
+                    ConfigurationSnapshots.applyContainer(container, container.getExtra(ConfigurationSnapshots.WORKING));
+                    container.putExtra(ConfigurationSnapshots.PREVIOUS, current);
+                    container.saveData();
+                    getParentFragmentManager().beginTransaction().replace(R.id.FLFragmentContainer, new ContainerDetailFragment(container.id)).commit();
+                }
+                catch (JSONException ignored) {}
+            }));
+        }
+
         AppUtils.setupTabLayout(view, R.id.TabLayout, (tabResId) -> {
             if (tabResId == R.id.LLTabAdvanced) if ((byte)sWinVersion.getTag() == -1) WinVersions.loadSpinner(container, sWinVersion);
-        }, R.id.LLTabWineConfiguration, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabDrives, R.id.LLTabAdvanced);
+        }, R.id.LLTabWineConfiguration, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabRecovery, R.id.LLTabDrives, R.id.LLTabAdvanced);
 
         view.findViewById(R.id.BTConfirm).setOnClickListener((v) -> {
             try {
@@ -212,6 +249,7 @@ public class ContainerDetailFragment extends Fragment {
                 String desktopTheme = getDesktopTheme(view);
 
                 if (isEditMode()) {
+                    String previous = ConfigurationSnapshots.captureContainer(container);
                     container.setName(name);
                     container.setScreenSize(screenSize);
                     container.setEnvVars(envVars);
@@ -230,6 +268,9 @@ public class ContainerDetailFragment extends Fragment {
                     container.setBox64Preset(box64Preset);
                     container.setDesktopTheme(desktopTheme);
                     container.setLSFGEnabled(cbEnableLSFGVK.isChecked());
+                    String current = ConfigurationSnapshots.captureContainer(container);
+                    if (!previous.equals(current)) container.putExtra(ConfigurationSnapshots.PREVIOUS, previous);
+                    if (saveWorkingRequested[0]) container.putExtra(ConfigurationSnapshots.WORKING, current);
                     container.saveData();
 
                     saveWineRegistryKeys(view);

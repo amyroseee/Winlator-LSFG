@@ -56,7 +56,7 @@ Configuration macro:
 #if _WIN32_WINNT >= 0x0600
 // Prefer native WindowsAPI on newer environment.
 #if !defined(__MINGW32__)
-#define EMULATED_THREADS_USE_NATIVE_CALL_ONCE 
+#define EMULATED_THREADS_USE_NATIVE_CALL_ONCE
 #endif
 #define EMULATED_THREADS_USE_NATIVE_CV
 #endif
@@ -221,7 +221,7 @@ static int impl_cond_do_wait(cnd_t *cond, mtx_t *mtx, const xtime *xt)
 
     w = WaitForSingleObject(cond->sem_queue, xt ? impl_xtime2msec(xt) : INFINITE);
     timeout = (w == WAIT_TIMEOUT);
- 
+
     EnterCriticalSection(&cond->monitor);
     if ((nleft = cond->to_unblock) != 0) {
         if (timeout) {

@@ -11,4 +11,3 @@
 #define SND_LIB_VERSION SND_LIB_VER(SND_LIB_MAJOR, SND_LIB_MINOR, SND_LIB_SUBMINOR)
 /** library version (string) */
 #define SND_LIB_VERSION_STR	"1.2.13"
-

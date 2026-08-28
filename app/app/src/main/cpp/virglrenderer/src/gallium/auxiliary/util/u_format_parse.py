@@ -53,7 +53,7 @@ VERY_LARGE = 99999999999999999999999
 
 class Channel:
     '''Describe the channel of a color channel.'''
-    
+
     def __init__(self, type, norm, pure, size, name = ''):
         self.type = type
         self.norm = norm
@@ -93,7 +93,7 @@ class Channel:
         if self.type == SIGNED:
             return (1 << (self.size - 1)) - 1
         assert False
-    
+
     def min(self):
         '''Minimum representable number.'''
         if self.type == FLOAT:
@@ -341,7 +341,7 @@ def parse(filename):
         if len (fields) == 10:
            fields += fields[4:9]
         assert len (fields) == 15
-        
+
         name = fields[0]
         layout = fields[1]
         block_width, block_height = map(int, fields[2:4])
@@ -370,4 +370,3 @@ def parse(filename):
         format = Format(name, layout, block_width, block_height, le_channels, le_swizzles, be_channels, be_swizzles, colorspace)
         formats.append(format)
     return formats
-

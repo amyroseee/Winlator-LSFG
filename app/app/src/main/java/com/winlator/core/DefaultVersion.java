@@ -7,6 +7,13 @@ import java.util.Locale;
 public abstract class DefaultVersion {
     public static final String BOX64 = "0.4.4";
     public static final String TURNIP = "26.1.0";
+    public static final String TURNIP_EXPERIMENTAL = "25.0.0.1";
+    public static final String TURNIP_BATCH_01_24_3 = "24.3.4.1";
+    public static final String TURNIP_BATCH_01_25_0 = "25.0.7.1";
+    public static final String TURNIP_BATCH_01_25_1 = "25.1.9.1";
+    public static final String TURNIP_BATCH_01_25_3 = "25.3.6.1";
+    public static final String TURNIP_BATCH_01_26_1 = "26.1.8.1";
+    public static final String TURNIP_BATCH_01_26_2 = "26.2.1.1";
     public static final String VORTEK = "2.1";
     public static final String ZINK = "22.2.5";
     public static final String VIRGL = "23.1.9";

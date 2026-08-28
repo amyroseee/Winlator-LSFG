@@ -62,4 +62,3 @@ long snd_midi_event_decode(snd_midi_event_t *dev, unsigned char *buf, long count
 #endif
 
 #endif /* __ALSA_SEQ_MIDI_EVENT_H */
-

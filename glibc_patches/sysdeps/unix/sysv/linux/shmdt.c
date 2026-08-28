@@ -9,7 +9,7 @@
 
 int shmdt(void const* shmaddr) {
     pthread_mutex_lock(&sysvshm_mutex);
-    
+
     for (int i = 0; i < shmemory_count; i++) {
         if (shmemories[i].addr == shmaddr) {
             munmap(shmemories[i].addr, shmemories[i].size);
@@ -17,8 +17,8 @@ int shmdt(void const* shmaddr) {
             if (shmemories[i].marked_for_delete) sysvshm_delete(i);
             break;
         }
-    }    
-    
+    }
+
     pthread_mutex_unlock(&sysvshm_mutex);
     return 0;
 }

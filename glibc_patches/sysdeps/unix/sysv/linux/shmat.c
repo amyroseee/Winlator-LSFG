@@ -21,7 +21,7 @@ void* shmat(int shmid, void const* shmaddr, int shmflg)
         }
         addr = shmemories[index].addr;
     }
-    
+
     pthread_mutex_unlock(&sysvshm_mutex);
     return addr ? addr : (void *)-1;
 }

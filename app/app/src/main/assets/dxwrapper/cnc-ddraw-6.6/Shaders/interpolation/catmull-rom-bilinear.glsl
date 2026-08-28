@@ -14,8 +14,8 @@
 #define COMPAT_ATTRIBUTE in
 #define COMPAT_TEXTURE texture
 #else
-#define COMPAT_VARYING varying 
-#define COMPAT_ATTRIBUTE attribute 
+#define COMPAT_VARYING varying
+#define COMPAT_ATTRIBUTE attribute
 #define COMPAT_TEXTURE texture2D
 #endif
 
@@ -117,7 +117,7 @@ void main()
     texPos0  *= SourceSize.zw;
     texPos3  *= SourceSize.zw;
     texPos12 *= SourceSize.zw;
-	
+
     float wtm = w12.x * w0.y;
     float wml = w0.x * w12.y;
     float wmm = w12.x * w12.y;
@@ -131,7 +131,7 @@ void main()
     result += COMPAT_TEXTURE(Source, vec2(texPos12.x, texPos12.y)).rgb * wmm;
     result += COMPAT_TEXTURE(Source, vec2(texPos3.x, texPos12.y)).rgb * wmr;
     result += COMPAT_TEXTURE(Source, vec2(texPos12.x, texPos3.y)).rgb * wbm;
-	
+
     FragColor = vec4(result * (1./(wtm+wml+wmm+wmr+wbm)), 1.0);
 }
 #endif

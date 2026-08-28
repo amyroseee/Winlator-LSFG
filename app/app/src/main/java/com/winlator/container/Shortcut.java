@@ -113,6 +113,28 @@ public class Shortcut {
         catch (JSONException e) {}
     }
 
+    public JSONObject getConfigurationExtras() {
+        JSONObject result = new JSONObject();
+        Iterator<String> keys = extraData.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            if (ConfigurationSnapshots.PREVIOUS.equals(key) || ConfigurationSnapshots.WORKING.equals(key)) continue;
+            try { result.put(key, extraData.get(key)); } catch (JSONException ignored) {}
+        }
+        return result;
+    }
+
+    public void setConfigurationExtras(JSONObject values) {
+        JSONObject snapshots = getConfigurationExtras();
+        Iterator<String> oldKeys = snapshots.keys();
+        while (oldKeys.hasNext()) putExtra(oldKeys.next(), null);
+        Iterator<String> keys = values.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            try { putExtra(key, values.getString(key)); } catch (JSONException ignored) {}
+        }
+    }
+
     public void saveData() {
         String content = "[Desktop Entry]\n";
         for (String line : FileUtils.readLines(file)) {

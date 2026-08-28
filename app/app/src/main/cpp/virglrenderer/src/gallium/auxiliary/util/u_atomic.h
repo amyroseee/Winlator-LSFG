@@ -23,7 +23,7 @@
 #elif defined(PIPE_CC_MSVC)
 #define PIPE_ATOMIC_MSVC_INTRINSIC
 #elif (defined(PIPE_CC_MSVC) && defined(PIPE_ARCH_X86))
-#define PIPE_ATOMIC_ASM_MSVC_X86                
+#define PIPE_ATOMIC_ASM_MSVC_X86
 #elif (defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86))
 #define PIPE_ATOMIC_ASM_GCC_X86
 #elif (defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86_64))
@@ -177,7 +177,7 @@ p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 /* Unlocked version for single threaded environments, such as some
  * windows kernel modules.
  */
-#if defined(PIPE_ATOMIC_OS_UNLOCKED) 
+#if defined(PIPE_ATOMIC_OS_UNLOCKED)
 
 #define PIPE_ATOMIC "Unlocked"
 

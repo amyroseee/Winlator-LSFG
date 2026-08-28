@@ -21,7 +21,7 @@ OpenGL 1.X emulation, shader conversion, texture decompression and more.
 - Chrono Trigger
 - WRATH Aeon of Ruin
 - Medal of Honor Allied Assault
-- Return to Castle Wolfenstein 
+- Return to Castle Wolfenstein
 - Ion Fury
 - SiN Gold
 - Anachronox

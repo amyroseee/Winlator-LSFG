@@ -21,3 +21,9 @@ local.properties
 **/*.spv
 **/*.spvasm
 **/*reflection*.json
+
+# Codespace-only references, SDKs, reports and staging files
+/lab/
+/.reference/
+/winlator-lsfg/
+CLOUDFLARE_LOGIN_URL.txt

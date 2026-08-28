@@ -63,14 +63,14 @@ extern pthread_mutex_t gl_call_mutex;
 
 #define GL_CALL_LOCK() if (currentGLContext->lockCount++ == 0) pthread_mutex_lock(&gl_call_mutex)
 #define GL_CALL_UNLOCK() if (--currentGLContext->lockCount == 0) pthread_mutex_unlock(&gl_call_mutex)
-        
+
 static inline GLXContext createGLXContext(Display* dpy, int contextId, GLXContext sharedContext) {
     GLXContext context = calloc(1, sizeof(__GLXcontextRec));
     context->dpy = dpy;
     context->id = contextId;
     GLVertexArrayObject_setBound(&context->clientState, 0);
     GLClientState_init(&context->clientState, sharedContext ? &sharedContext->clientState : NULL);
-    
+
     SparseArray_put(&glxContexts, contextId, context);
     return context;
 }

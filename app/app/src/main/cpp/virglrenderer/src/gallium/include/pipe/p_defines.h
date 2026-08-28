@@ -1,8 +1,8 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2007 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,11 +10,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,7 +22,7 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 #ifndef PIPE_DEFINES_H
@@ -180,7 +180,7 @@ enum pipe_texture_target {
 #define PIPE_TEX_MIPFILTER_LINEAR   1
 #define PIPE_TEX_MIPFILTER_NONE     2
 
-/* Within a mipmap, ie min/mag filter 
+/* Within a mipmap, ie min/mag filter
  */
 #define PIPE_TEX_FILTER_NEAREST      0
 #define PIPE_TEX_FILTER_LINEAR       1
@@ -218,7 +218,7 @@ enum pipe_transfer_usage {
     * create time.
     */
    PIPE_TRANSFER_READ = (1 << 0),
-   
+
    /**
     * Resource contents will be written back at transfer_unmap
     * time (or modified as a result of being accessed directly).
@@ -230,7 +230,7 @@ enum pipe_transfer_usage {
     */
    PIPE_TRANSFER_READ_WRITE = PIPE_TRANSFER_READ | PIPE_TRANSFER_WRITE,
 
-   /** 
+   /**
     * The transfer should map the texture storage directly. The driver may
     * return NULL if that isn't possible, and the state tracker needs to cope
     * with that and use an alternative path without this flag.
@@ -388,7 +388,7 @@ enum pipe_flush_flags {
  * The shared flag is quite underspecified, but certainly isn't a
  * binding flag - it seems more like a message to the winsys to create
  * a shareable allocation.
- * 
+ *
  * The third flag has been added to be able to force textures to be created
  * in linear mode (no tiling).
  */

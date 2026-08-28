@@ -1,9 +1,9 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2008 VMware, Inc.
  * Copyright (c) 2008 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -11,11 +11,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -23,21 +23,21 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 
-#include "pipe/p_config.h" 
+#include "pipe/p_config.h"
 
 #include "pipe/p_compiler.h"
-#include "util/u_debug.h" 
-#include "pipe/p_format.h" 
-#include "pipe/p_state.h" 
-#include "util/u_inlines.h" 
+#include "util/u_debug.h"
+#include "pipe/p_format.h"
+#include "pipe/p_state.h"
+#include "util/u_inlines.h"
 #include "util/u_format.h"
-#include "util/u_memory.h" 
-#include "util/u_string.h" 
-#include "util/u_math.h" 
+#include "util/u_memory.h"
+#include "util/u_string.h"
+#include "util/u_math.h"
 #include "util/u_prim.h"
 #include "util/u_surface.h"
 
@@ -142,7 +142,7 @@ debug_get_option(const char *name, const char *dfault)
 
    if (debug_get_option_should_print())
       debug_printf("%s: %s = %s\n", __FUNCTION__, name, result ? result : "(null)");
-   
+
    return result;
 }
 
@@ -151,7 +151,7 @@ debug_get_bool_option(const char *name, boolean dfault)
 {
    const char *str = os_get_option(name);
    boolean result;
-   
+
    if(str == NULL)
       result = dfault;
    else if(!util_strcmp(str, "n"))
@@ -173,7 +173,7 @@ debug_get_bool_option(const char *name, boolean dfault)
 
    if (debug_get_option_should_print())
       debug_printf("%s: %s = %s\n", __FUNCTION__, name, result ? "TRUE" : "FALSE");
-   
+
    return result;
 }
 
@@ -183,7 +183,7 @@ debug_get_num_option(const char *name, long dfault)
 {
    long result;
    const char *str;
-   
+
    str = os_get_option(name);
    if(!str)
       result = dfault;
@@ -194,7 +194,7 @@ debug_get_num_option(const char *name, long dfault)
       if(c == '-') {
 	 sign = -1;
 	 c = *str++;
-      } 
+      }
       else {
 	 sign = 1;
       }
@@ -256,7 +256,7 @@ static boolean str_has_option(const char *str, const char *name)
 }
 
 unsigned long
-debug_get_flags_option(const char *name, 
+debug_get_flags_option(const char *name,
                        const struct debug_named_value *flags,
                        unsigned long dfault)
 {
@@ -264,7 +264,7 @@ debug_get_flags_option(const char *name,
    const char *str;
    const struct debug_named_value *orig = flags;
    unsigned namealign = 0;
-   
+
    str = os_get_option(name);
    if(!str)
       result = dfault;
@@ -299,10 +299,10 @@ debug_get_flags_option(const char *name,
 }
 
 
-void _debug_assert_fail(const char *expr, 
-                        const char *file, 
-                        unsigned line, 
-                        const char *function) 
+void _debug_assert_fail(const char *expr,
+                        const char *file,
+                        unsigned line,
+                        const char *function)
 {
    _debug_printf("%s:%u:%s: Assertion `%s' failed.\n", file, line, function, expr);
    os_abort();
@@ -310,11 +310,11 @@ void _debug_assert_fail(const char *expr,
 
 
 const char *
-debug_dump_enum(const struct debug_named_value *names, 
+debug_dump_enum(const struct debug_named_value *names,
                 unsigned long value)
 {
    static char rest[64];
-   
+
    while(names->name) {
       if(names->value == value)
 	 return names->name;
@@ -327,12 +327,12 @@ debug_dump_enum(const struct debug_named_value *names,
 
 
 const char *
-debug_dump_enum_noprefix(const struct debug_named_value *names, 
+debug_dump_enum_noprefix(const struct debug_named_value *names,
                          const char *prefix,
                          unsigned long value)
 {
    static char rest[64];
-   
+
    while(names->name) {
       if(names->value == value) {
          const char *name = names->name;
@@ -345,7 +345,7 @@ debug_dump_enum_noprefix(const struct debug_named_value *names,
       ++names;
    }
 
-   
+
 
    util_snprintf(rest, sizeof(rest), "0x%08lx", value);
    return rest;
@@ -353,7 +353,7 @@ debug_dump_enum_noprefix(const struct debug_named_value *names,
 
 
 const char *
-debug_dump_flags(const struct debug_named_value *names, 
+debug_dump_flags(const struct debug_named_value *names,
                  unsigned long value)
 {
    static char output[4096];
@@ -374,21 +374,21 @@ debug_dump_flags(const struct debug_named_value *names,
       }
       ++names;
    }
-   
+
    if (value) {
       if (!first)
 	 util_strncat(output, "|", sizeof(output) - strlen(output) - 1);
       else
 	 first = 0;
-      
+
       util_snprintf(rest, sizeof(rest), "0x%08lx", value);
       util_strncat(output, rest, sizeof(output) - strlen(output) - 1);
       output[sizeof(output) - 1] = '\0';
    }
-   
+
    if(first)
       return "0";
-   
+
    return output;
 }
 

@@ -129,7 +129,7 @@ typedef enum snd_seq_client_type {
 	SND_SEQ_USER_CLIENT     = 1,	/**< user client */
 	SND_SEQ_KERNEL_CLIENT   = 2	/**< kernel client */
 } snd_seq_client_type_t;
-                        
+
 /** client MIDI version */
 enum {
 	SND_SEQ_CLIENT_LEGACY_MIDI = 0,		/**< Legacy client */
@@ -788,4 +788,3 @@ extern const unsigned int snd_seq_event_types[];
 #endif
 
 #endif /* __ALSA_SEQ_H */
-

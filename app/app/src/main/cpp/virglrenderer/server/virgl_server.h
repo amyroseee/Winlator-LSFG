@@ -86,4 +86,3 @@ int virgl_server_renderer_create_fence(struct virgl_client *client);
 void virgl_server_destroy_renderer(struct virgl_client *client);
 
 #endif
-

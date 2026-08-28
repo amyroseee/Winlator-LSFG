@@ -44,7 +44,7 @@ void DescriptorUpdateTemplate_fillDescriptorWrites(DescriptorUpdateTemplateInfo*
         VkBufferView* pTexelBufferView = NULL;
 
         const char* ptr = data + entry->offset;
-        
+
         if (IS_DESCRIPTOR_IMAGE_INFO(entry->descriptorType)) {
             pImageInfo = imageInfos + imageInfoOffset;
             for (j = 0; j < entry->descriptorCount; j++) {

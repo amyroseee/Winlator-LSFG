@@ -33,7 +33,7 @@ GLXContext glXCreateContextAttribsARB(Display* dpy, GLXFBConfig config, GLXConte
     if (!gladioInitOnce()) return NULL;
     GLX_CALL_LOCK();
     int contextId = maxContextId++;
-    
+
     ArrayBuffer requestData = {0};
     ArrayBuffer_putInt(&requestData, contextId);
     ArrayBuffer_putInt(&requestData, DEFAULT_FBCONFIG_ID);
@@ -41,7 +41,7 @@ GLXContext glXCreateContextAttribsARB(Display* dpy, GLXFBConfig config, GLXConte
     ArrayBuffer_putInt(&requestData, share_context ? share_context->id : 0);
     ArrayBuffer_put(&requestData, direct);
     ArrayBuffer_putBytes(&requestData, NULL, 3);
-    
+
     int i = 0;
     int num_attribs = 0;
     while (attrib_list[i]) {
@@ -49,25 +49,25 @@ GLXContext glXCreateContextAttribsARB(Display* dpy, GLXFBConfig config, GLXConte
         i += 2;
     }
     ArrayBuffer_putInt(&requestData, num_attribs);
-    
+
     i = 0;
     while (attrib_list[i]) {
         ArrayBuffer_putInt(&requestData, attrib_list[i+0]);
         ArrayBuffer_putInt(&requestData, attrib_list[i+1]);
         i += 2;
     }
-    
+
     if (!glx_send(serverFd, GLX_OPCODE_CREATE_CONTEXT_ATTRIBS_ARB, requestData.buffer, requestData.size)) {
         GLX_CALL_UNLOCK();
         return NULL;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return NULL;
     }
-    
+
     GLXContext context = createGLXContext(dpy, contextId, share_context);
     GLX_CALL_UNLOCK();
     return context;
@@ -89,12 +89,12 @@ GLXContext glXCreateContext(Display* dpy, XVisualInfo* vis, GLXContext shareList
         GLX_CALL_UNLOCK();
         return NULL;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return NULL;
-    }    
+    }
 
     GLXContext context = createGLXContext(dpy, contextId, shareList);
     GLX_CALL_UNLOCK();
@@ -187,7 +187,7 @@ int glXGetFBConfigAttrib(Display* dpy, GLXFBConfig config, int attribute, int* v
             return 0;
         }
     }
-    
+
     *value = 0;
     return 1;
 }
@@ -195,23 +195,23 @@ int glXGetFBConfigAttrib(Display* dpy, GLXFBConfig config, int attribute, int* v
 GLXFBConfig* glXGetFBConfigs(Display* dpy, int screen, int* nelements) {
     static struct __GLXFBConfigRec* globalFBConfigs = NULL;
     GLX_CALL_LOCK();
-   
+
     if (!glx_send(serverFd, GLX_OPCODE_GET_FB_CONFIGS, &screen, sizeof(int))) {
         GLX_CALL_UNLOCK();
         return NULL;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return NULL;
     }
-    
+
     int numFBConfigs = ArrayBuffer_getInt(&replyData);
     int numProperties = ArrayBuffer_getInt(&replyData);
     ArrayBuffer_skip(&replyData, 16);
     *nelements = numFBConfigs;
-    
+
     if (!globalFBConfigs) globalFBConfigs = calloc(numFBConfigs, sizeof(struct __GLXFBConfigRec));
     GLXFBConfig* fbConfigs = malloc(numFBConfigs * sizeof(GLXFBConfig));
 
@@ -221,7 +221,7 @@ GLXFBConfig* glXGetFBConfigs(Display* dpy, int screen, int* nelements) {
         for (j = 0; j < numProperties; j++) {
             fbConfigs[i]->attributes[j].name = ArrayBuffer_getInt(&replyData);
             fbConfigs[i]->attributes[j].value = ArrayBuffer_getInt(&replyData);
-        }        
+        }
     }
 
     GLX_CALL_UNLOCK();
@@ -284,11 +284,11 @@ XVisualInfo* glXGetVisualFromFBConfig(Display* dpy, GLXFBConfig config) {
     XVisualInfo visualInfo = {0};
     visualInfo.depth = 32;
     visualInfo.class = TrueColor;
-    
+
     int count;
     XVisualInfo *visuals = XGetVisualInfo(dpy, VisualDepthMask|VisualClassMask, &visualInfo, &count);
     if (!count) return NULL;
-    
+
     return visuals;
 }
 
@@ -346,22 +346,22 @@ const char* glXQueryExtensionsString(Display* dpy, int screen) {
         GLX_CALL_UNLOCK();
         return cachedString;
     }
-    
+
     if (!glx_send(serverFd, GLX_OPCODE_QUERY_EXTENSIONS_STRING, &screen, sizeof(int))) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     ArrayBuffer_skip(&replyData, 4);
     int length = ArrayBuffer_getInt(&replyData);
     ArrayBuffer_skip(&replyData, 16);
-    
+
     char* string = ArrayBuffer_getBytes(&replyData, length);
     char* result = putCachedString(GLX_EXTENSIONS, string, length);
     GLX_CALL_UNLOCK();
@@ -375,26 +375,26 @@ const char* glXQueryServerString(Display* dpy, int screen, int name) {
         GLX_CALL_UNLOCK();
         return cachedString;
     }
-    
+
     ArrayBuffer requestData = {0};
     ArrayBuffer_putInt(&requestData, screen);
     ArrayBuffer_putInt(&requestData, name);
-    
+
     if (!glx_send(serverFd, GLX_OPCODE_QUERY_SERVER_STRING, requestData.buffer, requestData.size)) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     ArrayBuffer_skip(&replyData, 4);
     int length = ArrayBuffer_getInt(&replyData);
     ArrayBuffer_skip(&replyData, 16);
-    
+
     char* string = ArrayBuffer_getBytes(&replyData, length);
     char* result = putCachedString(name, string, length);
     GLX_CALL_UNLOCK();
@@ -406,18 +406,18 @@ Bool glXQueryVersion(Display* dpy, int* maj, int* min) {
     ArrayBuffer requestData = {0};
     ArrayBuffer_putInt(&requestData, *maj);
     ArrayBuffer_putInt(&requestData, *min);
-    
+
     if (!glx_send(serverFd, GLX_OPCODE_QUERY_VERSION, requestData.buffer, requestData.size)) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     ArrayBuffer replyData = {0};
     if (!glx_recv(serverFd, &replyData)) {
         GLX_CALL_UNLOCK();
         return false;
     }
-    
+
     *maj = ArrayBuffer_getInt(&replyData);
     *min = ArrayBuffer_getInt(&replyData);
     GLX_CALL_UNLOCK();
@@ -447,4 +447,3 @@ void glXWaitGL() {
 void glXWaitX() {
     println(MSG_DEBUG_UNIMPLEMENTED_GLXCALL, "glXWaitX");
 }
-

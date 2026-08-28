@@ -28,7 +28,7 @@
 /**
  * @file
  * Hash table implementation.
- * 
+ *
  * This file provides a hash implementation that is capable of dealing
  * with collisions. It stores colliding entries in linked list. All
  * functions operating on the hash return an iterator. The iterator
@@ -37,7 +37,7 @@
  * iterate over the entries to find the exact entry among ones that
  * had the same key (e.g. memcmp could be used on the data to check
  * that)
- * 
+ *
  * @author Zack Rusin <zackr@vmware.com>
  */
 

@@ -113,4 +113,3 @@ FLUIDSYNTH_API void fluid_mod_clone(fluid_mod_t *mod, const fluid_mod_t *src);
 }
 #endif
 #endif /* _FLUIDSYNTH_MOD_H */
-

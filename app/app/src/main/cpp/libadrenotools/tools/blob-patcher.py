@@ -64,4 +64,3 @@ if (len(vulkan_newname) != len(vulkan_libname)):
 for libdir in ["/lib64/", "/lib/"]:
     patch_references(vendor_path + libdir, out_path + libdir, vulkan_libname, vulkan_newname, shim_mapper)
 print("done!")
-

@@ -9,5 +9,16 @@
     {"name" : "BOX64_DYNAREC_CALLRET", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "1"},
     {"name" : "BOX64_DYNAREC_WAIT", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "1"},
     {"name" : "BOX64_DYNAREC_NATIVEFLAGS", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"},
-    {"name" : "BOX64_DYNAREC_WEAKBARRIER", "values" : ["0", "1", "2"], "defaultValue" : "0"}
+    {"name" : "BOX64_DYNAREC_WEAKBARRIER", "values" : ["0", "1", "2"], "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_ALIGNED_ATOMICS", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_DF", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "1"},
+    {"name" : "BOX64_DYNAREC_DIRTY", "values" : ["0", "1", "2"], "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_PAUSE", "values" : ["0", "1", "2", "3"], "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_DIV0", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_TBB", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "1"},
+    {"name" : "BOX64_DYNAREC_SEP", "values" : ["0", "1", "2"], "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_NOHOTPAGE", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"},
+    {"name" : "BOX64_DYNAREC_VOLATILE_METADATA", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "1"},
+    {"name" : "BOX64_UNITYPLAYER", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"},
+    {"name" : "BOX64_UNITY", "values" : ["0", "1"], "toggleSwitch" : true, "defaultValue" : "0"}
 ]

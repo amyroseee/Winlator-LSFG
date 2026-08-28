@@ -28,12 +28,12 @@
 /**
  * @file
  * General purpose hash table implementation.
- * 
- * Just uses the cso_hash for now, but it might be better switch to a linear 
- * probing hash table implementation at some point -- as it is said they have 
- * better lookup and cache performance and it appears to be possible to write 
- * a lock-free implementation of such hash tables . 
- * 
+ *
+ * Just uses the cso_hash for now, but it might be better switch to a linear
+ * probing hash table implementation at some point -- as it is said they have
+ * better lookup and cache performance and it appears to be possible to write
+ * a lock-free implementation of such hash tables .
+ *
  * @author José Fonseca <jfonseca@vmware.com>
  */
 
@@ -49,14 +49,14 @@
 
 struct util_hash_table
 {
-   struct cso_hash *cso;   
-   
+   struct cso_hash *cso;
+
    /** Hash function */
    unsigned (*hash)(void *key);
-   
+
    /** Compare two keys */
    int (*compare)(void *key1, void *key2);
-   
+
    /** free value */
    void (*destroy)(void *value);
 };
@@ -82,21 +82,21 @@ util_hash_table_create(unsigned (*hash)(void *key),
                        void (*destroy)(void *value))
 {
    struct util_hash_table *ht;
-   
+
    ht = MALLOC_STRUCT(util_hash_table);
    if(!ht)
       return NULL;
-   
+
    ht->cso = cso_hash_create();
    if(!ht->cso) {
       FREE(ht);
       return NULL;
    }
-   
+
    ht->hash = hash;
    ht->compare = compare;
    ht->destroy = destroy;
-   
+
    return ht;
 }
 
@@ -108,7 +108,7 @@ util_hash_table_find_iter(struct util_hash_table *ht,
 {
    struct cso_hash_iter iter;
    struct util_hash_table_item *item;
-   
+
    iter = cso_hash_find(ht->cso, key_hash);
    while (!cso_hash_iter_is_null(iter)) {
       item = (struct util_hash_table_item *)cso_hash_iter_data(iter);
@@ -116,7 +116,7 @@ util_hash_table_find_iter(struct util_hash_table *ht,
          break;
       iter = cso_hash_iter_next(iter);
    }
-   
+
    return iter;
 }
 
@@ -128,7 +128,7 @@ util_hash_table_find_item(struct util_hash_table *ht,
 {
    struct cso_hash_iter iter;
    struct util_hash_table_item *item;
-   
+
    iter = cso_hash_find(ht->cso, key_hash);
    while (!cso_hash_iter_is_null(iter)) {
       item = (struct util_hash_table_item *)cso_hash_iter_data(iter);
@@ -136,7 +136,7 @@ util_hash_table_find_item(struct util_hash_table *ht,
          return item;
       iter = cso_hash_iter_next(iter);
    }
-   
+
    return NULL;
 }
 
@@ -162,14 +162,14 @@ util_hash_table_set(struct util_hash_table *ht,
       item->value = value;
       return PIPE_OK;
    }
-   
+
    item = MALLOC_STRUCT(util_hash_table_item);
    if(!item)
       return PIPE_ERROR_OUT_OF_MEMORY;
-   
+
    item->key = key;
    item->value = value;
-   
+
    iter = cso_hash_insert(ht->cso, key_hash, item);
    if(cso_hash_iter_is_null(iter)) {
       FREE(item);
@@ -196,7 +196,7 @@ util_hash_table_get(struct util_hash_table *ht,
    item = util_hash_table_find_item(ht, key, key_hash);
    if(!item)
       return NULL;
-   
+
    return item->value;
 }
 
@@ -218,17 +218,17 @@ util_hash_table_remove(struct util_hash_table *ht,
    iter = util_hash_table_find_iter(ht, key, key_hash);
    if(cso_hash_iter_is_null(iter))
       return;
-   
+
    item = util_hash_table_item(iter);
    assert(item);
    ht->destroy(item->value);
    FREE(item);
-   
+
    cso_hash_erase(ht->cso, iter);
 }
 
 
-void 
+void
 util_hash_table_clear(struct util_hash_table *ht)
 {
    struct cso_hash_iter iter;
@@ -294,6 +294,6 @@ util_hash_table_destroy(struct util_hash_table *ht)
    }
 
    cso_hash_delete(ht->cso);
-   
+
    FREE(ht);
 }

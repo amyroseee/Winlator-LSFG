@@ -55,7 +55,7 @@ int CompileHook(void *state, OptionsSet *opts) {
         .len = 3,
         .entry = argv,
     };
- 
+
     replacementOpts[patchedOptNum++] = {
         .type = OptionType::ArgsStringList,
         .strVals = &listVal

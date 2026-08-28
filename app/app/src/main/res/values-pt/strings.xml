@@ -150,6 +150,7 @@
     <string name="conservative">Conservador</string>
     <string name="intermediate">Intermediário</string>
     <string name="performance">Desempenho</string>
+    <string name="unity_preset">Preset Unity</string>
     <string name="preset">Predefinição</string>
     <string name="you_cannot_remove_this_preset">Você não pode remover esta predefinição</string>
     <string name="you_cannot_remove_this_component_version">Você não pode remover esta versão de componente</string>
@@ -332,4 +333,46 @@
     <string name="restoring_save_data">Restaurando dados de save</string>
     <string name="restore_completed">Restauração concluída</string>
     <string name="restore_failed">Falha na restauração</string>
+    <string name="box64_env_var_help__dynarec_aligned_atomics"><![CDATA[Gera apenas atomics alinhados no Arm64. <b>1</b> usa código menor e mais rápido, mas pode causar SIGBUS em operações LOCK com endereços desalinhados; <b>0</b> trata atomics desalinhados.]]></string>
+    <string name="box64_env_var_help__dynarec_df">Habilita flags adiadas. Desabilitar pode reduzir otimizações e afetar a compatibilidade.</string>
+    <string name="box64_env_var_help__dynarec_dirty"><![CDATA[Permite continuar um bloco potencialmente alterado. <b>1</b> pode acelerar o carregamento, mas causar travamentos inesperados; <b>2</b> também evita proteger contra escrita páginas hot detectadas e pode perder algumas alterações de código automodificável.]]></string>
+    <string name="box64_env_var_help__dynarec_pause">Seleciona a emulação de PAUSE x86: <b>0</b> ignora, <b>1</b> usa YIELD, <b>2</b> usa WFI e <b>3</b> usa SEVL+WFE. Esses modos podem afetar spinlocks e compatibilidade.</string>
+    <string name="box64_env_var_help__dynarec_div0">Controla a geração de exceções de divisão por zero. Habilite quando o software depender da exceção x86; caso contrário, o comportamento pode divergir.</string>
+    <string name="box64_env_var_help__dynarec_tbb">Controla a detecção de libtbb. Quando habilitada, o Box64 detecta libtbb e aplica configurações conservadoras; não ativa um modo de desempenho.</string>
+    <string name="box64_env_var_help__dynarec_sep">Adiciona pontos de entrada secundários para otimizar CALL/RET quando CALLRET está habilitado: <b>1</b> para binários conhecidos, <b>2</b> para toda memória. Pode afetar a compatibilidade.</string>
+    <string name="box64_env_var_help__dynarec_nohotpage">Controla a detecção de páginas hot, onde código é executado enquanto dados são escritos. Desabilitar pode perder alterações de código automodificável e causar travamentos.</string>
+    <string name="box64_env_var_help__dynarec_volatile_metadata">Usa metadados voláteis de arquivos PE para orientar a emulação de memória forte. Válido apenas para jogos Windows 64-bit; desabilitar remove essa orientação.</string>
+    <string name="box64_env_var_help__unityplayer">Detecta UnityPlayer e aplica configurações conservadoras, incluindo BOX64_UNITY=1 quando detectado. Não garante mais FPS.</string>
+    <string name="box64_env_var_help__unity">Marca o jogo como Unity: usa detecção especial no Windows e aplica BOX64_DYNAREC_STRONGMEM=1 no Linux. Altera compatibilidade, não garante ganho de FPS.</string>
+    <string name="restore_previous_configuration">Restaurar configuração anterior</string>
+    <string name="save_working_configuration">Salvar configuração funcional</string>
+    <string name="apply_working_configuration">Aplicar configuração funcional</string>
+    <string name="confirm_restore_configuration">Restaurar a configuração anterior?</string>
+    <string name="confirm_apply_working_configuration">Aplicar a configuração funcional?</string>
+    <string name="recovery">RECUPERAÇÃO</string>
+    <string name="online_game_configs">Configurações online de jogos</string><string name="game">Jogo</string><string name="compatible_match">Compatível</string><string name="information_only">somente informação</string><string name="installed">Instalado</string><string name="missing">Ausente</string>
+    <string name="select_shortcut">Selecionar atalho</string>
+    <string name="configuration_applied">Configuração aplicada</string>
+    <string name="no_online_configs">Nenhuma configuração online encontrada</string>
+    <string name="online_configs_found">Configurações online</string>
+    <string name="search">Pesquisar</string>
+    <string name="missing_component">Componente ausente</string>
+    <string name="config_requires_component">Esta configuração requer %1$s</string>
+    <string name="component_not_available">Componente necessário não disponível</string>
+    <string name="download">Baixar</string>
+    <string name="apply">Aplicar</string>
+    <string name="preview">Pré-visualização</string>
+    <string name="refresh">Atualizar</string>
+    <string name="publish_config">Publicar configuração</string>
+    <string name="publishing">Publicando...</string>
+    <string name="published_successfully">Publicada com sucesso</string>
+    <string name="publication_failed">Falha na publicação</string>
+    <string name="offline">Offline</string>
+    <string name="invalid_configuration">Configuração inválida</string>
+    <string name="confirm">Confirmar</string>
+    <string name="excellent_match">Compatibilidade excelente</string>
+    <string name="partial_match">Compatibilidade parcial</string>
+    <string name="unknown_compatibility">Desconhecida</string>
+    <string name="required_components">Componentes necessários</string>
+    <string name="device">Dispositivo</string><string name="soc">SoC</string><string name="gpu">GPU</string><string name="ram">RAM</string><string name="graphics">Gráficos</string><string name="cpu_box64">CPU / Box64</string><string name="compatibility">Compatibilidade</string><string name="preview_changes">Pré-visualizar alterações</string><string name="online_config_count">%1$d configurações</string><string name="not_specified">Não especificado</string><string name="no_compatible_shortcut">Nenhum atalho compatível encontrado</string><string name="using_cached_data">Usando dados em cache</string>
 </resources>

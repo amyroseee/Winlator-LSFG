@@ -1,8 +1,8 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2007 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,11 +10,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,7 +22,7 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 #ifndef U_INLINES_H
@@ -70,8 +70,8 @@ pipe_is_referenced(struct pipe_reference *reference)
  * \return TRUE if the object's refcount hits zero and should be destroyed.
  */
 static inline boolean
-pipe_reference_described(struct pipe_reference *ptr, 
-                         struct pipe_reference *reference, 
+pipe_reference_described(struct pipe_reference *ptr,
+                         struct pipe_reference *reference,
                          debug_reference_descriptor get_desc)
 {
    boolean destroy = FALSE;
@@ -99,7 +99,7 @@ pipe_reference_described(struct pipe_reference *ptr,
 static inline boolean
 pipe_reference(struct pipe_reference *ptr, struct pipe_reference *reference)
 {
-   return pipe_reference_described(ptr, reference, 
+   return pipe_reference_described(ptr, reference,
                                    (debug_reference_descriptor)debug_describe_reference);
 }
 
@@ -108,7 +108,7 @@ pipe_surface_reference(struct pipe_surface **ptr, struct pipe_surface *surf)
 {
    struct pipe_surface *old_surf = *ptr;
 
-   if (pipe_reference_described(&(*ptr)->reference, &surf->reference, 
+   if (pipe_reference_described(&(*ptr)->reference, &surf->reference,
                                 (debug_reference_descriptor)debug_describe_surface))
       old_surf->context->surface_destroy(old_surf->context, old_surf);
    *ptr = surf;
@@ -135,7 +135,7 @@ pipe_resource_reference(struct pipe_resource **ptr, struct pipe_resource *tex)
 {
    struct pipe_resource *old_tex = *ptr;
 
-   if (pipe_reference_described(&(*ptr)->reference, &tex->reference, 
+   if (pipe_reference_described(&(*ptr)->reference, &tex->reference,
                                 (debug_reference_descriptor)debug_describe_resource))
       old_tex->screen->resource_destroy(old_tex->screen, old_tex);
    *ptr = tex;
@@ -256,8 +256,8 @@ pipe_buffer_create( struct pipe_screen *screen,
 
 /**
  * Map a range of a resource.
- * \param offset  start of region, in bytes 
- * \param length  size of region, in bytes 
+ * \param offset  start of region, in bytes
+ * \param length  size of region, in bytes
  * \param access  bitmask of PIPE_TRANSFER_x flags
  * \param transfer  returns a transfer object
  */

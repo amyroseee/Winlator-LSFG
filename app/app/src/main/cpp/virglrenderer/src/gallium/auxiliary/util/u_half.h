@@ -128,4 +128,3 @@ util_half_to_float(uint16_t f16)
 #endif
 
 #endif /* U_HALF_H */
-

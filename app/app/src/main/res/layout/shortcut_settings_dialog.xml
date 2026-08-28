@@ -199,6 +199,11 @@
             <com.google.android.material.tabs.TabItem
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:text="@string/recovery" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/advanced" />
         </com.google.android.material.tabs.TabLayout>
 
@@ -263,6 +268,35 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:text="@string/add" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/LLTabRecovery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTRestorePreviousConfiguration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/restore_previous_configuration" />
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTSaveWorkingConfiguration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/save_working_configuration" />
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTApplyWorkingConfiguration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/apply_working_configuration" />
         </LinearLayout>
 
         <LinearLayout

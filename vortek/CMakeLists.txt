@@ -9,7 +9,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 ${WARNS} -DVK_USE_PLATFORM_XLIB_KHR")
 
 include_directories(include)
 
-add_library(vulkan_vortek SHARED 
+add_library(vulkan_vortek SHARED
             src/main.c
             src/vulkan_calls.c
             src/vk_object.c

@@ -11,9 +11,9 @@
 
 int shmget(key_t key, size_t size, int flags) {
     if (key != IPC_PRIVATE) return -1;
-    
+
     pthread_mutex_lock(&sysvshm_mutex);
-        
+
     sysvshm_connect();
     int shmid = sysvshm_shmget_request(size);
     if (shmid == 0) {
@@ -21,7 +21,7 @@ int shmget(key_t key, size_t size, int flags) {
         pthread_mutex_unlock(&sysvshm_mutex);
         return -1;
     }
-    
+
     size = ROUND_UP(size, getpagesize());
     int index = shmemory_count;
     shmemory_count++;
@@ -31,16 +31,16 @@ int shmget(key_t key, size_t size, int flags) {
     shmemories[index].addr = NULL;
     shmemories[index].id = shmid;
     shmemories[index].marked_for_delete = 0;
-    
+
     sysvshm_close();
-    
+
     if (shmemories[index].fd < 0) {
         shmemory_count--;
         shmemories = realloc(shmemories, shmemory_count * sizeof(shmemory_t));
         pthread_mutex_unlock(&sysvshm_mutex);
         return -1;
     }
-    
+
     pthread_mutex_unlock(&sysvshm_mutex);
     return shmid;
 }

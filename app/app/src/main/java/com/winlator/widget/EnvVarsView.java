@@ -26,6 +26,15 @@ import com.winlator.core.UnitUtils;
 import java.util.Arrays;
 
 public class EnvVarsView extends FrameLayout {
+    private static final String[] preview2EnvVars = {
+        "FD_DEV_FEATURES",
+        "MESA_VK_WSI_DEBUG",
+        "DXVK_DISABLE_TIMELINE_SEMAPHORES",
+        "DXVK_FRAME_RATE",
+        "DXVK_CONFIG",
+        "DXVK_STATE_CACHE_PATH",
+    };
+
     public static final String[][] knownEnvVars = {
         {"ZINK_DESCRIPTORS", "SELECT", "auto", "lazy", "cached", "notemplates"},
         {"ZINK_DEBUG", "SELECT_MULTIPLE", "nir", "spirv", "tgsi", "validation", "sync", "compact", "noreorder"},
@@ -36,6 +45,12 @@ public class EnvVarsView extends FrameLayout {
         {"DXVK_HUD", "SELECT_MULTIPLE", "devinfo", "fps", "frametimes", "submissions", "drawcalls", "pipelines", "descriptors", "memory", "gpuload", "version", "api", "cs", "compiler", "samplers"},
         {"DXVK_LOG_LEVEL", "SELECT", "none", "error", "warn", "info", "debug"},
         {"DXVK_ASYNC", "CHECKBOX", "0", "1"},
+        {"FD_DEV_FEATURES", "OPTIONAL_CHECKBOX", "enable_tp_ubwc_flag_hint=1"},
+        {"MESA_VK_WSI_DEBUG", "OPTIONAL_CHECKBOX", "forcesync"},
+        {"DXVK_DISABLE_TIMELINE_SEMAPHORES", "OPTIONAL_CHECKBOX", "1"},
+        {"DXVK_FRAME_RATE", "NUMBER"},
+        {"DXVK_CONFIG", "TEXT"},
+        {"DXVK_STATE_CACHE_PATH", "TEXT"},
         {"GALLIUM_HUD", "TEXT"},
         {"MESA_SHADER_CACHE_DISABLE", "CHECKBOX", "false", "true"},
         {"mesa_glthread", "CHECKBOX", "false", "true"},
@@ -123,6 +138,12 @@ public class EnvVarsView extends FrameLayout {
                 toggleButton.setChecked(value.equals("1") || value.equals("true"));
                 getValueCallback = () -> toggleButton.isChecked() ? knownEnvVar[3] : knownEnvVar[2];
                 break;
+            case "OPTIONAL_CHECKBOX":
+                final ToggleButton optionalToggleButton = itemView.findViewById(R.id.ToggleButton);
+                optionalToggleButton.setVisibility(VISIBLE);
+                optionalToggleButton.setChecked(value.equals(knownEnvVar[2]));
+                getValueCallback = () -> optionalToggleButton.isChecked() ? knownEnvVar[2] : "";
+                break;
             case "SELECT":
                 String[] items = Arrays.copyOfRange(knownEnvVar, 2, knownEnvVar.length);
                 final Spinner spinner = itemView.findViewById(R.id.Spinner);
@@ -161,5 +182,8 @@ public class EnvVarsView extends FrameLayout {
     public void setEnvVars(EnvVars envVars) {
         container.removeAllViews();
         for (String name : envVars) add(name, envVars.get(name));
+        for (String name : preview2EnvVars) {
+            if (!containsName(name)) add(name, "");
+        }
     }
 }

@@ -13,4 +13,8 @@
         android:id="@+id/menu_item_view_style"
         android:title="@string/view_style"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_item_online_configs"
+        android:title="@string/online_game_configs"
+        app:showAsAction="never" />
 </menu>

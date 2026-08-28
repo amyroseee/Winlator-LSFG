@@ -88,4 +88,3 @@ os_get_option(const char *name)
 {
    return getenv(name);
 }
-

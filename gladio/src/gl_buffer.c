@@ -13,7 +13,7 @@ GLBuffer* GLBuffer_getBound(GLenum target) {
 
 void GLBuffer_setBound(GLenum target, GLuint id) {
     GLClientState* clientState = currentGLContext->clientState;
-    
+
     GLBuffer* buffer = NULL;
     if (id > 0) {
         buffer = SparseArray_get(clientState->buffers, id);
@@ -24,7 +24,7 @@ void GLBuffer_setBound(GLenum target, GLuint id) {
             SparseArray_put(clientState->buffers, id, buffer);
         }
     }
-    
+
     clientState->vao->buffer[indexOfGLTarget(target)] = buffer;
 }
 
@@ -43,7 +43,7 @@ static void unmapBuffer(GLBuffer* buffer) {
 
 bool GLBuffer_mapMemory(GLBuffer* buffer, int fd, int size) {
     unmapBuffer(buffer);
-    
+
     void* mappedData = mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
     if (mappedData == MAP_FAILED) return false;
     memset(mappedData, 0, size);
@@ -64,8 +64,8 @@ void GLBuffer_delete(GLuint id) {
         }
         for (int i = 0; i < MAX_BUFFER_TARGETS; i++) {
             if (clientState->defaultVAO.buffer[i] == buffer) clientState->defaultVAO.buffer[i] = NULL;
-        }        
-        
+        }
+
         ArrayList_remove(&clientState->persistentBuffers, buffer);
         unmapBuffer(buffer);
         MEMFREE(buffer);
@@ -88,7 +88,7 @@ void GLBuffer_getParamsv(GLenum target, GLenum pname, GLint* params) {
         *params = 0;
         return;
     }
-    
+
     switch (pname) {
         case GL_BUFFER_ACCESS:
         case GL_BUFFER_ACCESS_FLAGS:
@@ -103,7 +103,7 @@ void GLBuffer_getParamsv(GLenum target, GLenum pname, GLint* params) {
             break;
         case GL_BUFFER_MAP_LENGTH:
             *params = buffer->mapLength;
-            break; 
+            break;
         case GL_BUFFER_MAP_OFFSET:
             *params = buffer->mapOffset;
             break;
@@ -112,27 +112,27 @@ void GLBuffer_getParamsv(GLenum target, GLenum pname, GLint* params) {
             break;
         case GL_BUFFER_USAGE:
             *params = buffer->usage;
-            break;            
+            break;
     }
 }
 
 void flushMappedPersistentBuffers(GLint first, GLsizei count, const void* indices, GLenum indexType, GLint basevertex) {
     if (currentGLContext->clientState->persistentBuffers.size == 0) return;
-    
+
     if (indexType != GL_NONE) {
         GLuint range[2];
         getRangeIndices(indices, count, indexType, basevertex, range);
         first = range[0];
         count = (range[1] - range[0]) + 1;
     }
-    
+
     GLClientState* clientState = currentGLContext->clientState;
     for (int i = 0; i < clientState->persistentBuffers.size; i++) {
         GLBuffer* buffer = clientState->persistentBuffers.elements[i];
         if (buffer->mapped) {
             int offset = first * buffer->drawStride + buffer->mapOffset;
             int length = count * buffer->drawStride;
-            
+
             glFlushMappedBufferRange(buffer->type, offset, length);
         }
     }

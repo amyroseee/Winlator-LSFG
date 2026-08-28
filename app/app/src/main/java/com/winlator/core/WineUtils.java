@@ -206,7 +206,7 @@ public abstract class WineUtils {
     public static boolean isWineprefixWasUpdated(Container container) {
         File file = new File(container.getRootDir(), "/.wine/.update-timestamp");
         String content = FileUtils.readString(file);
-        
+
         if (!content.startsWith("disable")) {
             content = content.replaceAll("[\r\n]+", "");
             try {

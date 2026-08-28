@@ -50,7 +50,7 @@ void glArrayElement(GLint i) {
         currentGLContext->commandBuffer.minIndex = MIN(currentGLContext->commandBuffer.minIndex, i);
         currentGLContext->commandBuffer.maxIndex = MAX(currentGLContext->commandBuffer.maxIndex, i);
     }
-    else {    
+    else {
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putInt(&outputBuffer, i);
         GLClientState* clientState = currentGLContext->clientState;
@@ -487,13 +487,13 @@ void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfiel
         GL_CALL_UNLOCK();
         return;
     }
-    
+
     ArrayBuffer_rewind(&outputBuffer);
     ArrayBuffer_putInt(&outputBuffer, target);
     ArrayBuffer_putInt(&outputBuffer, size);
     ArrayBuffer_putInt(&outputBuffer, flags);
     GL_SEND_CHECKED(REQUEST_CODE_GL_BUFFER_STORAGE, outputBuffer.buffer, outputBuffer.size);
-    
+
     int fd, numFds;
     bool success = false;
     recv_fds(serverFd, &fd, &numFds, &success, sizeof(bool));
@@ -501,7 +501,7 @@ void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfiel
         GL_CALL_UNLOCK();
         return;
     }
-    
+
     if ((flags & GL_MAP_PERSISTENT_BIT) && target != GL_PIXEL_UNPACK_BUFFER) {
         ArrayList_remove(&currentGLContext->clientState->persistentBuffers, buffer);
         ArrayList_add(&currentGLContext->clientState->persistentBuffers, buffer);
@@ -778,9 +778,9 @@ void glColor4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) {
     GL_CALL_LOCK();
     if (currentGLContext->commandBuffer.begin) {
         ArrayBuffer_putShort(&currentGLContext->commandBuffer.data, REQUEST_CODE_GL_COLOR4F);
-        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, red, green, blue, alpha);        
+        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, red, green, blue, alpha);
     }
-    else {    
+    else {
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putFloat4(&outputBuffer, red, green, blue, alpha);
         gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_COLOR4F, outputBuffer.buffer, outputBuffer.size);
@@ -974,7 +974,7 @@ void glCompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint 
     ArrayBuffer_putInt(&outputBuffer, height);
     ArrayBuffer_putInt(&outputBuffer, format);
     GL_SEND_TEXIMAGE(REQUEST_CODE_GL_COMPRESSED_TEX_SUB_IMAGE2D, format, 0, width, height, 1, data, imageSize);
-    GL_CALL_UNLOCK();    
+    GL_CALL_UNLOCK();
 }
 
 void glCompressedTexSubImage2DARB(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data) {
@@ -1681,10 +1681,10 @@ void glEnableClientState(GLenum array) {
         if (array == GL_TEXTURE_COORD_ARRAY) {
             GLVertexArrayObject_setAttribState(clientState, TEXCOORD_ARRAY_INDEX + clientState->activeTexCoord, VERTEX_ATTRIB_LEGACY_ENABLED, false);
         }
-        else GLVertexArrayObject_setAttribState(clientState, array, VERTEX_ATTRIB_LEGACY_ENABLED, false);        
+        else GLVertexArrayObject_setAttribState(clientState, array, VERTEX_ATTRIB_LEGACY_ENABLED, false);
     }
     gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_ENABLE_CLIENT_STATE, &array, sizeof(GLenum));
-    GL_CALL_UNLOCK();    
+    GL_CALL_UNLOCK();
 }
 
 void glEnableClientStateIndexedEXT(GLenum array, GLuint index) {
@@ -1738,15 +1738,15 @@ void glEnd() {
     CommandBuffer* commandBuffer = &currentGLContext->commandBuffer;
     if (commandBuffer->begin) {
         commandBuffer->begin = false;
-        
+
         int indexCount = commandBuffer->minIndex != INT32_MAX ? (commandBuffer->maxIndex - commandBuffer->minIndex) + 1 : 0;
-        
+
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putInt(&outputBuffer, commandBuffer->mode);
         ArrayBuffer_putInt(&outputBuffer, commandBuffer->minIndex);
         ArrayBuffer_putInt(&outputBuffer, indexCount);
         ArrayBuffer_putInt(&outputBuffer, commandBuffer->data.size);
-        
+
         if (indexCount > 0) {
             GLClientState* clientState = currentGLContext->clientState;
             for (int i = 0; i < clientState->vao->maxEnabledAttribs; i++) {
@@ -1756,7 +1756,7 @@ void glEnd() {
                 }
             }
         }
-        
+
         gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_END, outputBuffer.buffer, outputBuffer.size);
         if (commandBuffer->data.size > 0) {
             RingBuffer_write(currentGLContext->serverRing, commandBuffer->data.buffer, commandBuffer->data.size);
@@ -1918,7 +1918,7 @@ void glFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
     if (!buffer) {
         GL_CALL_UNLOCK();
         return;
-    }    
+    }
     ArrayBuffer_rewind(&outputBuffer);
     ArrayBuffer_putInt(&outputBuffer, target);
     ArrayBuffer_putInt(&outputBuffer, offset);
@@ -2428,7 +2428,7 @@ GLenum glGetError() {
     static int noError = -1;
     if (noError == -1) noError = getenv("GLADIO_NO_ERROR") && atoi(getenv("GLADIO_NO_ERROR"));
     if (noError) return GL_NO_ERROR;
-    
+
     GL_CALL_LOCK();
     GL_SEND_CHECKED(REQUEST_CODE_GL_GET_ERROR, NULL, 0, GL_RETURN);
     GL_RECV_CHECKED(GL_RETURN);
@@ -2529,7 +2529,7 @@ void glGetIntegerv(GLenum pname, GLint* data) {
 }
 
 void glGetInternalformati64v(GLenum target, GLenum internalformat, GLenum pname, GLsizei count, GLint64* params) {
-    GLint data[count]; 
+    GLint data[count];
     glGetInternalformativ(target, internalformat, pname, count, data);
     for (int i = 0; i < count; i++) params[i] = data[i];
 }
@@ -2942,7 +2942,7 @@ void glGetShaderiv(GLuint shader, GLenum pname, GLint* params) {
 const GLubyte* glGetString(GLenum name) {
     char* cachedString = getCachedString(name);
     if (cachedString) return (const GLubyte*)cachedString;
-    
+
     GL_CALL_LOCK();
     ArrayBuffer_rewind(&outputBuffer);
     ArrayBuffer_putInt(&outputBuffer, name);
@@ -4065,9 +4065,9 @@ void glMultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q
     if (currentGLContext->commandBuffer.begin) {
         ArrayBuffer_putShort(&currentGLContext->commandBuffer.data, REQUEST_CODE_GL_MULTI_TEX_COORD4F);
         ArrayBuffer_putInt(&currentGLContext->commandBuffer.data, target);
-        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, s, t, r, q);        
+        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, s, t, r, q);
     }
-    else {    
+    else {
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putInt(&outputBuffer, target);
         ArrayBuffer_putFloat4(&outputBuffer, s, t, r, q);
@@ -4374,7 +4374,7 @@ void glNormal3f(GLfloat nx, GLfloat ny, GLfloat nz) {
         ArrayBuffer_putShort(&currentGLContext->commandBuffer.data, REQUEST_CODE_GL_NORMAL3F);
         ArrayBuffer_putFloat3(&currentGLContext->commandBuffer.data, nx, ny, nz);
     }
-    else {    
+    else {
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putFloat3(&outputBuffer, nx, ny, nz);
         gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_NORMAL3F, outputBuffer.buffer, outputBuffer.size);
@@ -4991,7 +4991,7 @@ void glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format
     ArrayBuffer_putInt(&outputBuffer, height);
     ArrayBuffer_putInt(&outputBuffer, format);
     ArrayBuffer_putInt(&outputBuffer, type);
-    
+
     GLBuffer* pixelPackBuffer = GLBuffer_getBound(GL_PIXEL_PACK_BUFFER);
     if (pixelPackBuffer) {
         ArrayBuffer_putInt(&outputBuffer, (uint64_t)pixels);
@@ -6519,12 +6519,12 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w) {
     GL_CALL_LOCK();
     if (currentGLContext->commandBuffer.begin) {
         ArrayBuffer_putShort(&currentGLContext->commandBuffer.data, REQUEST_CODE_GL_VERTEX4F);
-        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, x, y, z, w);        
+        ArrayBuffer_putFloat4(&currentGLContext->commandBuffer.data, x, y, z, w);
     }
     else {
         ArrayBuffer_rewind(&outputBuffer);
         ArrayBuffer_putFloat4(&outputBuffer, x, y, z, w);
-        gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_VERTEX4F, outputBuffer.buffer, outputBuffer.size);        
+        gl_send(currentGLContext->serverRing, REQUEST_CODE_GL_VERTEX4F, outputBuffer.buffer, outputBuffer.size);
     }
     GL_CALL_UNLOCK();
 }
@@ -7264,7 +7264,7 @@ void glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean norm
         }
         else GLVertexArrayObject_setAttribState(clientState, index, VERTEX_ATTRIB_DISABLED, true);
     }
-    
+
     if (arrayBuffer && arrayBuffer->mapped) {
         short drawStride = stride > 0 ? stride : (MIN(4, size) * sizeofGLType(type) + (uint64_t)pointer);
         arrayBuffer->drawStride = MAX(drawStride, arrayBuffer->drawStride);
@@ -7447,4 +7447,3 @@ void glWindowPos3sv(const GLshort* v) {
 void glWindowPos3svARB(const GLshort* v) {
     glWindowPos3sv(v);
 }
-
